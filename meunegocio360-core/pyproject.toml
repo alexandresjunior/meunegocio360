@@ -1,0 +1,42 @@
+[project]
+name = "meunegocio360-core"
+version = "0.1.0"
+description = "MeuNegocio360 - microsserviço Núcleo (identidade, autenticação e base empresarial)"
+requires-python = ">=3.13"
+dependencies = [
+    "alembic>=1.20.1",
+    "bcrypt>=5.0.0",
+    "fastapi>=0.162.5",
+    "psycopg[binary]>=3.3.9",
+    "pydantic>=2.14.3",
+    "pydantic-settings>=2.16.2",
+    "pyjwt>=2.15.1",
+    "sqlalchemy>=2.1.8",
+    "uvicorn>=0.54.0",
+]
+
+[project.scripts]
+# Rotina de limpeza de refresh tokens (RF-BE-001), para agendamento externo (Cron Job)
+meunegocio360-limpar-tokens = "meunegocio360_core.auth.cli:limpar_tokens"
+
+[build-system]
+requires = ["uv_build>=0.13.8,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.17.5",
+]
+
+# Formatação e lint (RNF-082)
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "N", "SIM", "RUF"]
+# N818: nomes de exceção de domínio em português (ex.: ErroDeNegocio) não levam sufixo "Error".
+ignore = ["N818"]
+
+[tool.ruff.lint.per-file-ignores]
+"migrations/**" = ["N999"]

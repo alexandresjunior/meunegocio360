@@ -2,7 +2,7 @@
 #
 # Uso:
 #   cp .env.example .env        # preencha as senhas (o arquivo .env nunca é versionado)
-#   docker compose up -d        # sobe o MySQL do Núcleo
+#   docker compose up -d --build  # sobe o PostgreSQL e o backend do Núcleo
 #   docker compose down         # para os contêineres (mantém os dados)
 #   docker compose down -v      # para e APAGA os dados locais do banco
 #
@@ -15,30 +15,43 @@ name: meunegocio360
 
 services:
   core-db:
-    image: mysql:8.4
+    image: postgres:18
     container_name: meunegocio360-core-db
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Defina MYSQL_ROOT_PASSWORD no arquivo .env}
-      MYSQL_DATABASE: ${CORE_DB_NAME:-meunegocio360_core}
-      MYSQL_USER: ${DB_USER:-meunegocio360}
-      MYSQL_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD no arquivo .env}
+      # O usuário criado aqui é o mesmo usado pela aplicação (dono do banco do Núcleo).
+      POSTGRES_DB: ${CORE_DB_NAME:-meunegocio360_core}
+      POSTGRES_USER: ${DB_USER:-meunegocio360}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD no arquivo .env}
       TZ: UTC
-    command:
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_0900_ai_ci
-      - --default-time-zone=+00:00
+      PGTZ: UTC
     ports:
       # Exposto apenas em localhost: o banco não fica acessível pela rede.
-      - "127.0.0.1:${CORE_DB_PORT:-3306}:3306"
+      - "127.0.0.1:${CORE_DB_PORT:-5432}:5432"
     volumes:
-      - core-db-data:/var/lib/mysql
+      # A partir do PostgreSQL 18, a imagem oficial guarda os dados em
+      # /var/lib/postgresql/<versão>/docker; monta-se o diretório pai.
+      - core-db-data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 30s
+      start_period: 20s
+
+  core-api:
+    build: ./meunegocio360-core
+    container_name: meunegocio360-core-api
+    restart: unless-stopped
+    # Mesmas variáveis do .env da raiz; só o endereço do banco muda (nome do serviço na rede do compose).
+    env_file: .env
+    environment:
+      DB_URL: postgresql+psycopg://core-db:5432/${CORE_DB_NAME:-meunegocio360_core}
+    depends_on:
+      core-db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${CORE_API_PORT:-8080}:8080"
 
 volumes:
   core-db-data:

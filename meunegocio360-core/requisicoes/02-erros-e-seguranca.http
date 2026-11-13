@@ -1,0 +1,72 @@
+# RF-BE-001 — Respostas de erro (problem+json) e regras de segurança.
+# Todas as respostas de erro trazem "code" e "traceId" (igual ao cabeçalho X-Request-Id).
+
+@baseUrl = http://localhost:8080/api/v1
+
+### 1. Senha incorreta → 401 INVALID_CREDENTIALS, mensagem genérica, sem Set-Cookie
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@meunegocio360.com.br",
+  "senha": "senha-errada-123"
+}
+
+### 2. E-mail inexistente → exatamente a mesma resposta 401 do item 1 (anti-enumeração, RN-03)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "nao.existe@meunegocio360.com.br",
+  "senha": "senha-errada-123"
+}
+
+### 3. E-mail malformado e senha vazia → 400 VALIDATION_ERROR com a lista "errors"
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "isto-nao-e-um-email",
+  "senha": ""
+}
+
+### 4. Corpo ausente → 400 VALIDATION_ERROR
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+### 5. JSON malformado → 400 VALIDATION_ERROR
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "email": "admin@meunegocio360.com.br", "senha":
+
+### 6. /me sem token → 401 UNAUTHORIZED com WWW-Authenticate: Bearer
+GET {{baseUrl}}/auth/me
+
+### 7. /me com token adulterado/inválido → 401 UNAUTHORIZED
+GET {{baseUrl}}/auth/me
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ4In0.assinatura-falsa
+
+### 8. /me com token "alg: none" (sem assinatura) → 401 UNAUTHORIZED
+GET {{baseUrl}}/auth/me
+Authorization: Bearer eyJhbGciOiJub25lIn0.eyJpc3MiOiJtZXVuZWdvY2lvMzYwLWNvcmUiLCJzdWIiOiIwMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDAiLCJwZXJmaWwiOiJBRE1JTiIsImV4cCI6NDEwMjQ0NDgwMH0.
+
+### 9. Endpoint qualquer, sem token → 401 (deny-by-default, RNF-021)
+GET {{baseUrl}}/clientes
+
+### 10. Refresh com Origin não permitida → 403 ORIGIN_NOT_ALLOWED (nenhum token é rotacionado)
+POST {{baseUrl}}/auth/refresh
+Origin: https://site-malicioso.example
+
+### 11. Logout com Origin não permitida → 403 ORIGIN_NOT_ALLOWED
+POST {{baseUrl}}/auth/logout
+Origin: https://site-malicioso.example
+
+### 12. Refresh com cookie desconhecido → 401 INVALID_REFRESH_TOKEN e cookie limpo (Max-Age=0)
+# Usa 127.0.0.1 de propósito: assim o REST Client não substitui o Cookie abaixo pelo que guardou para "localhost".
+POST http://127.0.0.1:8080/api/v1/auth/refresh
+Cookie: mn360_refresh=token-que-nao-existe
+
+### 13. Requisição com X-Request-Id próprio → o mesmo valor volta no cabeçalho e no "traceId"
+GET {{baseUrl}}/auth/me
+X-Request-Id: teste-manual-0001

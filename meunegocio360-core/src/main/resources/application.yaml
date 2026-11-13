@@ -1,3 +1,64 @@
+# Configuração base, comum a todos os perfis (RNF-052).
+# Valores sensíveis vêm SEMPRE de variáveis de ambiente (RNF-022); não há valor padrão para eles.
 spring:
   application:
     name: meunegocio360-core
+
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # O schema é evoluído apenas pelo Flyway (RNF-BE-20, RNF-BE-21).
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    locations: classpath:db/migration
+
+server:
+  port: ${PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-exception: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      # Sem detalhes sensíveis (RNF-051, RNF-104).
+      show-details: never
+
+logging:
+  pattern:
+    # Identificador de correlação nos logs de texto (RNF-050, RNF-BE-43).
+    correlation: "[%X{requestId:-}] "
+
+app:
+  cors:
+    # Mesma lista usada na verificação do cabeçalho Origin (RNF-BE-40, RNF-BE-42).
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
+  auth:
+    max-tentativas: ${APP_AUTH_MAX_TENTATIVAS:5}
+    bloqueio-minutos: ${APP_AUTH_BLOQUEIO_MINUTOS:15}
+    jwt:
+      secret: ${JWT_SECRET}
+      issuer: meunegocio360-core
+      expiracao-minutos: ${APP_AUTH_JWT_EXPIRACAO_MINUTOS:15}
+    refresh:
+      expiracao-dias: ${APP_AUTH_REFRESH_EXPIRACAO_DIAS:7}
+      # Remoção diária dos tokens expirados/revogados há mais de 30 dias.
+      limpeza-cron: "0 0 3 * * *"
+      retencao-dias: 30
+    cookie:
+      secure: ${APP_AUTH_COOKIE_SECURE:true}

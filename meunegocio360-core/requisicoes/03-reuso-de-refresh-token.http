@@ -1,0 +1,34 @@
+# RF-BE-001 — Detecção de reuso de refresh token (RN-07, RN-08).
+#
+# Este cenário precisa do valor de um refresh token JÁ ROTACIONADO. Como o REST Client não
+# extrai partes de um cabeçalho Set-Cookie, a cópia é manual:
+#   1) envie o item 1 e, na aba de resposta, copie o valor de mn360_refresh do cabeçalho Set-Cookie
+#      (somente o trecho entre "mn360_refresh=" e o primeiro ";");
+#   2) cole o valor em @tokenAntigo, abaixo;
+#   3) envie os itens 2, 3 e 4, na ordem.
+#
+# Os itens com 127.0.0.1 enviam o cookie manualmente: para esse host o REST Client não tem cookie
+# guardado e, por isso, não sobrescreve o cabeçalho Cookie.
+
+@baseUrl = http://localhost:8080/api/v1
+@tokenAntigo = COLE_AQUI_O_VALOR_DO_COOKIE_DO_ITEM_1
+
+### 1. Login → guarde o valor do cookie mn360_refresh
+# @prompt senha Senha do admin (valor de SEED_ADMIN_SENHA no .env)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@meunegocio360.com.br",
+  "senha": "{{senha}}"
+}
+
+### 2. Refresh legítimo (cookie guardado pelo REST Client) → 200; o token do item 1 fica revogado
+POST {{baseUrl}}/auth/refresh
+
+### 3. Reapresenta o token antigo (já rotacionado) → 401 INVALID_REFRESH_TOKEN e a família inteira é revogada
+POST http://127.0.0.1:8080/api/v1/auth/refresh
+Cookie: mn360_refresh={{tokenAntigo}}
+
+### 4. O token mais recente (do item 2) também deixou de valer → 401 INVALID_REFRESH_TOKEN
+POST {{baseUrl}}/auth/refresh

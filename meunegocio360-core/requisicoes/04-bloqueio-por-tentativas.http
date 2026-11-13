@@ -1,0 +1,36 @@
+# RF-BE-001 — Bloqueio temporário por tentativas falhas (RN-04, RN-13).
+#
+# Usa o usuário de seed "usuario@meunegocio360.com.br" para não bloquear o admin.
+# Envie o item 1 CINCO vezes; depois envie o item 2.
+# Dica: para não esperar 15 minutos, defina APP_AUTH_BLOQUEIO_MINUTOS=1 no .env e reinicie o backend.
+
+@baseUrl = http://localhost:8080/api/v1
+
+### 1. Senha errada (envie 5 vezes) → 401 INVALID_CREDENTIALS nas cinco; a quinta bloqueia a conta
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "usuario@meunegocio360.com.br",
+  "senha": "senha-errada-123"
+}
+
+### 2. Senha CORRETA durante o bloqueio → 429 ACCOUNT_TEMPORARILY_LOCKED com Retry-After (segundos)
+# @prompt senha Senha do usuário (valor de SEED_USUARIO_SENHA no .env)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "usuario@meunegocio360.com.br",
+  "senha": "{{senha}}"
+}
+
+### 3. Passado o tempo do Retry-After, repita com a senha correta → 200 (o contador volta a zero)
+# @prompt senha Senha do usuário (valor de SEED_USUARIO_SENHA no .env)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "usuario@meunegocio360.com.br",
+  "senha": "{{senha}}"
+}

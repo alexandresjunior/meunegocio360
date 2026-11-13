@@ -1,0 +1,16 @@
+# Perfil de produção: tudo vem das variáveis de ambiente do Render (RNF-102).
+server:
+  # O Render termina o TLS no proxy; com isso o Spring reconhece HTTPS (HSTS, RNF-BE-41).
+  forward-headers-strategy: framework
+
+# Swagger UI e OpenAPI apenas fora de produção (RNF-030).
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+logging:
+  structured:
+    format:
+      console: ecs

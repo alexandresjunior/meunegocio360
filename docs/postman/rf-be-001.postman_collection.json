@@ -1,0 +1,705 @@
+{
+  "info": {
+    "name": "MeuNegocio360 - RF-BE-001 Autenticação",
+    "description": "Verificação manual dos critérios de aceite do RF-BE-001 (docs/requisitos-be.md).\n\nPré-requisitos:\n1. `docker compose up -d --build` na raiz, com `APP_ENV=dev` e `APP_AUTH_COOKIE_SECURE=false` no `.env` (o Postman fala HTTP com localhost).\n2. Em *Variables* da coleção, preencha o **Current value** de `senha` (valor de SEED_ADMIN_SENHA) e `senhaUsuario` (valor de SEED_USUARIO_SENHA). Não preencha o *Initial value*: ele é exportado com a coleção.\n\nExecute as pastas na ordem (Run collection). A pasta 4 bloqueia o usuário de perfil USUARIO por 15 minutos.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "email", "value": "admin@meunegocio360.com.br" },
+    { "key": "senha", "value": "" },
+    { "key": "emailUsuario", "value": "usuario@meunegocio360.com.br" },
+    { "key": "senhaUsuario", "value": "" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshAnterior", "value": "" },
+    { "key": "refreshAtual", "value": "" },
+    { "key": "respostaSenhaIncorreta", "value": "" },
+    { "key": "tokenAlgNone", "value": "" },
+    { "key": "falhas", "value": "0" }
+  ],
+  "item": [
+    {
+      "name": "1. Fluxo principal",
+      "item": [
+        {
+          "name": "Health check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 UP, sem detalhes (RNF-051)', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json()).to.eql({ status: 'UP' });",
+                  "});",
+                  "pm.test('X-Request-Id na resposta (RNF-BE-43)', () => {",
+                  "  pm.response.to.have.header('X-Request-Id');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actuator/health"
+          }
+        },
+        {
+          "name": "Login com credenciais válidas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const corpo = pm.response.json();",
+                  "pm.test('200 com accessToken, tokenType Bearer e expiresIn 900', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(corpo.tokenType).to.eql('Bearer');",
+                  "  pm.expect(corpo.expiresIn).to.eql(900);",
+                  "  pm.expect(corpo.usuario.email).to.eql(pm.collectionVariables.get('email'));",
+                  "  pm.expect(corpo.usuario).to.have.all.keys('id', 'nome', 'email', 'perfil');",
+                  "});",
+                  "pm.test('Refresh token não aparece no corpo (RN-06)', () => {",
+                  "  pm.expect(JSON.stringify(corpo)).to.not.include(pm.cookies.get('mn360_refresh'));",
+                  "});",
+                  "pm.test('JWT contém sub, perfil, iss, iat, exp e jti', () => {",
+                  "  let p = corpo.accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');",
+                  "  p += '='.repeat((4 - p.length % 4) % 4);",
+                  "  const claims = JSON.parse(atob(p));",
+                  "  ['sub', 'perfil', 'iss', 'iat', 'exp', 'jti'].forEach(c => pm.expect(claims).to.have.property(c));",
+                  "  pm.expect(claims.iss).to.eql('meunegocio360-core');",
+                  "});",
+                  "pm.test('Cookie mn360_refresh com HttpOnly, SameSite=Strict e Path=/api/v1/auth', () => {",
+                  "  const setCookie = pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').map(h => h.value).join('\\n');",
+                  "  pm.expect(setCookie).to.include('mn360_refresh=');",
+                  "  pm.expect(setCookie).to.match(/HttpOnly/i);",
+                  "  pm.expect(setCookie).to.match(/SameSite=strict/i);",
+                  "  pm.expect(setCookie).to.include('Path=/api/v1/auth');",
+                  "  pm.expect(setCookie).to.match(/Max-Age=604800/i);",
+                  "});",
+                  "pm.collectionVariables.set('accessToken', corpo.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"senha\": \"{{senha}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          }
+        },
+        {
+          "name": "Me com token válido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 com os dados do usuário autenticado', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().email).to.eql(pm.collectionVariables.get('email'));",
+                  "  pm.expect(pm.response.json()).to.not.have.any.keys('senhaHash', 'senha');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/auth/me"
+          }
+        },
+        {
+          "name": "Refresh (renovação de sessão)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('refreshAnterior', pm.cookies.get('mn360_refresh') || '');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 com novo accessToken e objeto usuario', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().accessToken).to.not.eql(pm.collectionVariables.get('accessToken'));",
+                  "  pm.expect(pm.response.json()).to.have.property('usuario');",
+                  "});",
+                  "pm.test('Novo cookie, diferente do anterior (rotação, RN-07)', () => {",
+                  "  pm.expect(pm.cookies.get('mn360_refresh')).to.be.a('string').and.not.eql(pm.collectionVariables.get('refreshAnterior'));",
+                  "});",
+                  "pm.collectionVariables.set('accessToken', pm.response.json().accessToken);",
+                  "pm.collectionVariables.set('refreshAtual', pm.cookies.get('mn360_refresh'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/auth/refresh"
+          }
+        },
+        {
+          "name": "Refresh com Origin não permitido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 ORIGIN_NOT_ALLOWED (RNF-BE-40)', () => {",
+                  "  pm.response.to.have.status(403);",
+                  "  pm.expect(pm.response.json().code).to.eql('ORIGIN_NOT_ALLOWED');",
+                  "});",
+                  "pm.test('Nenhum token rotacionado (cookie inalterado)', () => {",
+                  "  pm.expect(pm.cookies.get('mn360_refresh')).to.eql(pm.collectionVariables.get('refreshAtual'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Origin", "value": "https://site-malicioso.example" }],
+            "url": "{{baseUrl}}/api/v1/auth/refresh"
+          }
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 e cookie expirado', () => {",
+                  "  pm.response.to.have.status(204);",
+                  "  const setCookie = pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').map(h => h.value).join('\\n');",
+                  "  pm.expect(setCookie).to.match(/mn360_refresh=(\"\")?;/);",
+                  "  pm.expect(setCookie).to.match(/Max-Age=0/i);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/auth/logout"
+          }
+        },
+        {
+          "name": "Refresh com o token encerrado pelo logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 INVALID_REFRESH_TOKEN: o logout revogou no servidor (RN-10)', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.json().code).to.eql('INVALID_REFRESH_TOKEN');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": { "disableCookies": true },
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Cookie", "value": "mn360_refresh={{refreshAtual}}" }],
+            "url": "{{baseUrl}}/api/v1/auth/refresh"
+          }
+        },
+        {
+          "name": "Logout novamente, sem cookie",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 também sem cookie (idempotente)', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": { "disableCookies": true },
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/auth/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Erros de login",
+      "item": [
+        {
+          "name": "Senha incorreta",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const corpo = pm.response.json();",
+                  "pm.test('401 INVALID_CREDENTIALS com mensagem genérica', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(corpo.code).to.eql('INVALID_CREDENTIALS');",
+                  "  pm.expect(corpo.detail).to.eql('E-mail ou senha inválidos.');",
+                  "  pm.response.to.have.header('Content-Type', 'application/problem+json');",
+                  "});",
+                  "pm.test('Nenhum cookie emitido', () => pm.response.to.not.have.header('Set-Cookie'));",
+                  "delete corpo.traceId;",
+                  "pm.collectionVariables.set('respostaSenhaIncorreta', JSON.stringify(corpo));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"senha\": \"senha-errada-123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          }
+        },
+        {
+          "name": "E-mail inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const corpo = pm.response.json();",
+                  "delete corpo.traceId;",
+                  "pm.test('Mesma resposta da senha incorreta (RN-03)', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(JSON.stringify(corpo)).to.eql(pm.collectionVariables.get('respostaSenhaIncorreta'));",
+                  "});",
+                  "console.log('Tempo de resposta (compare com \"Senha incorreta\"):', pm.response.responseTime, 'ms');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nao.existe@meunegocio360.com.br\",\n  \"senha\": \"senha-errada-123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          }
+        },
+        {
+          "name": "Entrada inválida (e-mail malformado, senha vazia)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR com a lista de campos', () => {",
+                  "  pm.response.to.have.status(400);",
+                  "  const corpo = pm.response.json();",
+                  "  pm.expect(corpo.code).to.eql('VALIDATION_ERROR');",
+                  "  pm.expect(corpo.errors.map(e => e.field)).to.include.members(['email', 'senha']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"invalido\",\n  \"senha\": \"\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          }
+        },
+        {
+          "name": "Corpo ausente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR', () => {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().code).to.eql('VALIDATION_ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          }
+        },
+        {
+          "name": "JSON malformado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR', () => {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().code).to.eql('VALIDATION_ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"email\": ",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Sessão e segurança",
+      "item": [
+        {
+          "name": "Me sem token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 UNAUTHORIZED com WWW-Authenticate: Bearer', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.json().code).to.eql('UNAUTHORIZED');",
+                  "  pm.expect(pm.response.headers.get('WWW-Authenticate')).to.include('Bearer');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/auth/me"
+          }
+        },
+        {
+          "name": "Me com token adulterado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 UNAUTHORIZED', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.json().code).to.eql('UNAUTHORIZED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}x", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/auth/me"
+          }
+        },
+        {
+          "name": "Me com token alg none",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b64 = s => btoa(s).replace(/=+$/, '').replace(/\\+/g, '-').replace(/\\//g, '_');",
+                  "const agora = Math.floor(Date.now() / 1000);",
+                  "const claims = { iss: 'meunegocio360-core', sub: '00000000-0000-0000-0000-000000000000', perfil: 'ADMIN', iat: agora, exp: agora + 900, jti: 'teste' };",
+                  "pm.collectionVariables.set('tokenAlgNone', b64(JSON.stringify({ alg: 'none', typ: 'JWT' })) + '.' + b64(JSON.stringify(claims)) + '.');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401: token sem assinatura é rejeitado', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tokenAlgNone}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/auth/me"
+          }
+        },
+        {
+          "name": "Endpoint desconhecido sem token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 (deny-by-default, RNF-021), não 404', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/qualquer-recurso"
+          }
+        },
+        {
+          "name": "Refresh sem cookie",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 INVALID_REFRESH_TOKEN e cookie limpo', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.json().code).to.eql('INVALID_REFRESH_TOKEN');",
+                  "  pm.expect(pm.response.headers.get('Set-Cookie')).to.match(/Max-Age=0/i);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": { "disableCookies": true },
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/auth/refresh"
+          }
+        },
+        {
+          "name": "Reuso - 1. Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('refreshAnterior', pm.cookies.get('mn360_refresh'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"senha\": \"{{senha}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          }
+        },
+        {
+          "name": "Reuso - 2. Refresh (rotaciona)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('refreshAtual', pm.cookies.get('mn360_refresh'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/auth/refresh"
+          }
+        },
+        {
+          "name": "Reuso - 3. Reapresentar o token já rotacionado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 INVALID_REFRESH_TOKEN (RN-08)', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.json().code).to.eql('INVALID_REFRESH_TOKEN');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": { "disableCookies": true },
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Cookie", "value": "mn360_refresh={{refreshAnterior}}" }],
+            "url": "{{baseUrl}}/api/v1/auth/refresh"
+          }
+        },
+        {
+          "name": "Reuso - 4. Token mais recente também foi revogado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401: toda a família foi revogada', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.json().code).to.eql('INVALID_REFRESH_TOKEN');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": { "disableCookies": true },
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Cookie", "value": "mn360_refresh={{refreshAtual}}" }],
+            "url": "{{baseUrl}}/api/v1/auth/refresh"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Bloqueio por tentativas (usuário USUARIO)",
+      "item": [
+        {
+          "name": "Senha incorreta (repete 5 vezes)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 INVALID_CREDENTIALS', () => pm.response.to.have.status(401));",
+                  "const falhas = Number(pm.collectionVariables.get('falhas')) + 1;",
+                  "pm.collectionVariables.set('falhas', falhas);",
+                  "console.log('Falha', falhas, 'de 5');",
+                  "if (falhas < 5) {",
+                  "  pm.execution.setNextRequest(pm.info.requestName); // no Runner; manualmente, envie 5 vezes",
+                  "} else {",
+                  "  pm.collectionVariables.set('falhas', 0);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailUsuario}}\",\n  \"senha\": \"senha-errada-123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          }
+        },
+        {
+          "name": "Senha correta durante o bloqueio",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('429 ACCOUNT_TEMPORARILY_LOCKED com Retry-After (RN-04)', () => {",
+                  "  pm.response.to.have.status(429);",
+                  "  pm.expect(pm.response.json().code).to.eql('ACCOUNT_TEMPORARILY_LOCKED');",
+                  "  const espera = Number(pm.response.headers.get('Retry-After'));",
+                  "  pm.expect(espera).to.be.above(0).and.at.most(900);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailUsuario}}\",\n  \"senha\": \"{{senhaUsuario}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          }
+        }
+      ]
+    }
+  ]
+}

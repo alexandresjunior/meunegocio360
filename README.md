@@ -141,7 +141,7 @@ docker compose up -d
 
 # 3. Backend (na pasta do serviço; no Windows use mvnw.cmd)
 cd meunegocio360-core
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+.\mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 
 # 4. Frontend (em outro terminal)
 cd meunegocio360-js
@@ -164,6 +164,25 @@ A descrição de cada variável está comentada em [`.env.example`](./.env.examp
 | `meunegocio360-js` | `npm run format` | Formata com Prettier (disponível a partir de [RF-FE-001](./docs/requisitos-fe.md#rf-fe-001--fluxo-de-login-do-usuário)). |
 
 Scripts de teste serão acrescentados na fase de testes (ver [Contribuições](#6-contribuições)).
+
+### Verificação manual da autenticação no Postman (RF-BE-001)
+
+1. Copie `.env.example` para `.env` e preencha `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `JWT_SECRET` (ao menos 32 bytes) e as duas senhas `SEED_*` (8 a 72 caracteres). Para testar por HTTP local, configure `APP_AUTH_COOKIE_SECURE=false`; essa opção só é permitida no perfil `dev`.
+2. Execute `docker compose up -d` e inicie o backend com o perfil `dev`. Crie um ambiente Postman com `baseUrl=http://localhost:8080` e `accessToken` vazio.
+3. Envie `POST {{baseUrl}}/api/v1/auth/login`, com `Content-Type: application/json` e corpo `{"email":"admin@meunegocio360.com.br","senha":"{{senhaAdmin}}"}`. Guarde a senha de seed em variável local/secret do Postman. Verifique `200`, `tokenType`, `expiresIn` e `usuario`; o `accessToken` deve ser salvo na variável de ambiente. O refresh deve aparecer somente no cookie `mn360_refresh`.
+4. Envie `GET {{baseUrl}}/api/v1/auth/me`; na aba **Authorization**, escolha autenticação por token e informe `{{accessToken}}`. Espere `200` e os mesmos dados de `usuario`. Sem autenticação, espere `401`, `WWW-Authenticate` e `application/problem+json`.
+5. Envie `POST {{baseUrl}}/api/v1/auth/refresh` sem corpo. O Postman deve enviar o cookie automaticamente. Confira `200`, novo access token e rotação do cookie; salve novamente o access token. O refresh token não deve aparecer no JSON.
+6. Envie `POST {{baseUrl}}/api/v1/auth/logout`; confira `204` e expiração do cookie. Uma nova chamada de refresh sem cookie deve responder `401` e limpar o cookie.
+7. Verifique validação com login inválido (`400`, `VALIDATION_ERROR`) e senha errada/e-mail inexistente (mesmo `401`, `INVALID_CREDENTIALS`). Para reuso: copie o cookie antigo antes de renovar, reutilize-o depois da rotação e confirme `401`; a família inteira deve deixar de renovar.
+8. Verifique bloqueio por último: faça cinco tentativas consecutivas com senha incorreta e confira `401`; a tentativa seguinte deve retornar `429`, `ACCOUNT_TEMPORARILY_LOCKED` e `Retry-After`. Para validar `403`, envie `Origin: https://origem-nao-permitida.example` em refresh/logout. Ambos os casos podem ser inspecionados no corpo de problema.
+
+Para salvar o token de acesso automaticamente nas respostas de login e refresh, use em **Scripts > Post-response**:
+
+```javascript
+if (pm.response.code === 200) {
+  pm.environment.set("accessToken", pm.response.json().accessToken);
+}
+```
 
 ### Conceitos de DevOps (introdutórios)
 

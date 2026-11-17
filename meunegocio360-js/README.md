@@ -1,16 +1,24 @@
-# React + Vite
+# Frontend MeuNegocio360
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend React com Vite. A tela de login, a restauração de sessão e a página inicial protegida seguem o [RF-FE-001](../docs/requisitos-fe.md#rf-fe-001--fluxo-de-login-do-usuário).
 
-Currently, two official plugins are available:
+## Desenvolvimento local
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Na raiz do repositório, inicie o banco e o backend conforme o [README principal](../README.md#5-primeiros-passos). Em seguida, neste diretório:
 
-## React Compiler
+```powershell
+npm install
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+O Vite encaminha `/api` para `http://localhost:8080`. A URL base do frontend deve permanecer relativa (`VITE_API_BASE_URL=/api/v1`); consulte [`.env.example`](./.env.example). Não coloque segredos em variáveis `VITE_*`.
 
-## Expanding the ESLint configuration
+O arquivo `public/_redirects` permite abrir diretamente as rotas da SPA em hospedagem estática. Em produção, configure também o repasse de `/api/*` para a URL do serviço Render, conforme a [seção de implantação](../README.md#72-frontend-no-netlify).
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Comandos
+
+```powershell
+npm run lint
+npm run format
+npm run build
+```

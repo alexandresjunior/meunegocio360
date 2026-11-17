@@ -1,0 +1,35 @@
+.app-page {
+  min-height: 100vh;
+}
+
+.app-container {
+  max-width: 48rem;
+}
+
+.app-card {
+  width: 100%;
+  max-width: 32rem;
+}
+
+.login-card {
+  max-width: 30rem;
+}
+
+.login-brand {
+  display: block;
+  width: min(100%, 20rem);
+  height: auto;
+  margin: 0 auto 1.5rem;
+}
+
+.form-control,
+.btn {
+  min-height: 2.75rem;
+}
+
+.btn:focus-visible,
+.form-control:focus-visible,
+a:focus-visible {
+  outline: 0.2rem solid var(--bs-primary);
+  outline-offset: 0.15rem;
+}

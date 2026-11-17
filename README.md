@@ -27,7 +27,7 @@ O MeuNegocio360 é organizado em três módulos de negócio:
 | **Serviços** | Operação de serviços | Gestão de técnicos, equipamentos, solicitações, ordens de serviço (OS), execução, evidências, aceite e faturamento da OS. |
 | **Suprimentos** | Estoque e compras | Movimentações, estoque mínimo, inventário, compras, reposição, curva ABC, giro e alertas. |
 
-Estado atual: apenas o **Núcleo** (`meunegocio360-core`) e o frontend (`meunegocio360-js`) existem. Serviços e Suprimentos serão implementados futuramente. A base parte dos projetos gerados (Spring Initializr e Vite); as funcionalidades entram requisito a requisito, conforme o índice em [`docs/requisitos-gerais.md`](./docs/requisitos-gerais.md#2-requisitos-funcionais).
+Estado atual: apenas o **Núcleo** (`meunegocio360-core`) e o frontend (`meunegocio360-js`) existem. Serviços e Suprimentos serão implementados futuramente. O frontend oferece o fluxo de login e sessão persistente do [RF-FE-001](./docs/requisitos-fe.md#rf-fe-001--fluxo-de-login-do-usuário), consumindo a autenticação do Núcleo conforme o [RF-BE-001](./docs/requisitos-be.md#rf-be-001--autenticação-de-usuário-login). As demais funcionalidades entram requisito a requisito, conforme o índice em [`docs/requisitos-gerais.md`](./docs/requisitos-gerais.md#2-requisitos-funcionais).
 
 ## 2. Arquitetura
 

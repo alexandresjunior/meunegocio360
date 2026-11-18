@@ -1,0 +1,104 @@
+// Tema do Bootstrap 5 com a identidade visual do MeuNegócio360 (RNF-FE-07, RNF-FE-08).
+// Toda cor, fonte e tamanho da aplicação sai daqui; componentes não escrevem cores próprias.
+
+@import 'bootstrap/scss/functions';
+
+// 2.1 Paleta
+$mn-laranja: #ec4e26;
+$mn-creme: #fcf5f0;
+$mn-cinza: #4a3f39;
+$mn-preto: #1f1612;
+$mn-rodape: #cdbbae;
+
+$primary: $mn-laranja;
+// Botões e textos "dark" usam o Preto da marca: 4,8:1 sobre o Laranja (o #212529 padrão fica em 4,2:1).
+$dark: $mn-preto;
+// 2.2 Feedback com contraste AA sobre o Creme (6,0:1).
+$danger: #b02a37;
+$success: #146c43;
+
+$body-bg: $mn-creme;
+$body-color: $mn-preto;
+$body-secondary-color: $mn-cinza;
+$border-color: $mn-cinza;
+$card-bg: $mn-creme;
+$card-border-color: $mn-cinza;
+$table-border-color: $mn-cinza;
+
+// Botão primário com texto Preto sobre Laranja (4,8:1); Branco e Creme não atingem 4,5:1.
+$min-contrast-ratio: 4.5;
+$color-contrast-dark: $mn-preto;
+
+// Links em Preto e sempre sublinhados (Laranja sobre Creme não atinge 4,5:1).
+$link-color: $mn-preto;
+$link-hover-color: $mn-cinza;
+$link-decoration: underline;
+
+// Barra de navegação laranja com texto e links em Preto.
+$navbar-light-color: $mn-preto;
+$navbar-light-hover-color: $mn-preto;
+$navbar-light-active-color: $mn-preto;
+$navbar-light-brand-color: $mn-preto;
+$navbar-light-brand-hover-color: $mn-preto;
+
+// Foco visível com contraste mínimo de 3:1 contra o fundo (RNF-FE-23).
+$focus-ring-color: $mn-preto;
+$focus-ring-opacity: 1;
+$focus-ring-width: 0.2rem;
+$input-focus-border-color: $mn-preto;
+$input-btn-focus-color-opacity: 1;
+$input-btn-focus-color: $mn-preto;
+
+// Alvos interativos com pelo menos 44 px de altura (RNF-FE-23).
+$input-btn-padding-y: 0.625rem;
+
+// 2.3 Tipografia: Barlow no texto e Barlow Condensed nos títulos.
+$font-family-sans-serif:
+  'Barlow',
+  system-ui,
+  -apple-system,
+  'Segoe UI',
+  Roboto,
+  'Helvetica Neue',
+  Arial,
+  sans-serif;
+$headings-font-family: 'Barlow Condensed', $font-family-sans-serif;
+$headings-font-weight: 600;
+$font-weight-base: 400;
+$font-size-base: 1rem;
+
+@import 'bootstrap/scss/variables';
+@import 'bootstrap/scss/variables-dark';
+
+// Cor do rodapé, gerando utilitários como .bg-footer.
+$theme-colors: map-merge(
+  $theme-colors,
+  (
+    'footer': $mn-rodape,
+  )
+);
+
+@import 'bootstrap/scss/maps';
+@import 'bootstrap/scss/mixins';
+@import 'bootstrap/scss/utilities';
+@import 'bootstrap/scss/bootstrap';
+
+// O que o Bootstrap não cobre, sempre com variáveis do tema.
+
+// Botões usam uma sombra de foco derivada da própria cor; sobre o Laranja ela fica fraca demais.
+.btn:focus-visible {
+  outline: $focus-ring-width solid $mn-preto;
+  outline-offset: 2px;
+}
+
+// Página inteira ocupando a altura da janela, com o rodapé no fim.
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.mn-logo-login {
+  max-width: 16rem;
+  height: auto;
+}

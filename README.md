@@ -4,7 +4,7 @@
 
 Sistema comercial de gestão de clientes, serviços e suprimentos para pequenas e médias empresas, desenvolvido com uso assistido de IA em todas as etapas do ciclo de desenvolvimento (requisitos, código, testes, revisão e deploy).
 
-Este README descreve **como o projeto é organizado e como trabalhar nele**. O que o sistema deve fazer (requisitos funcionais e não funcionais) está em [`docs/`](./docs).
+Este README descreve **como o projeto é organizado e como trabalhar nele**. O que o sistema deve fazer (requisitos funcionais e não funcionais) está em [`docs/requisitos/`](./docs/requisitos).
 
 ## Sumário
 
@@ -27,7 +27,7 @@ O MeuNegocio360 é organizado em três módulos de negócio:
 | **Serviços** | Operação de serviços | Gestão de técnicos, equipamentos, solicitações, ordens de serviço (OS), execução, evidências, aceite e faturamento da OS. |
 | **Suprimentos** | Estoque e compras | Movimentações, estoque mínimo, inventário, compras, reposição, curva ABC, giro e alertas. |
 
-Estado atual: apenas o **Núcleo** (`meunegocio360-core`) e o frontend (`meunegocio360-js`) existem. Serviços e Suprimentos serão implementados futuramente. A base parte dos projetos gerados (Spring Initializr e Vite); as funcionalidades entram requisito a requisito, conforme o índice em [`docs/requisitos-gerais.md`](./docs/requisitos-gerais.md#2-requisitos-funcionais).
+Estado atual: apenas o **Núcleo** (`meunegocio360-core`) e o frontend (`meunegocio360-js`) existem. Serviços e Suprimentos serão implementados futuramente. A base parte dos projetos gerados (Spring Initializr e Vite); as funcionalidades entram requisito a requisito, conforme o índice em [`docs/requisitos-gerais.md`](./docs/requisitos/GERAIS.md#2-requisitos-funcionais).
 
 ## 2. Arquitetura
 
@@ -39,7 +39,7 @@ O sistema segue uma arquitetura de **microsserviços**, consumida por **um únic
 | Serviços | `meunegocio360-servicos` | Técnicos, equipamentos, solicitações, OS, execução, evidências, aceite e faturamento da OS. | Futuro |
 | Suprimentos | `meunegocio360-suprimentos` | Movimentações, estoque mínimo, inventário, compras, reposição, curva ABC, giro e alertas. | Futuro |
 
-Cada serviço tem código, build, banco de dados e implantação próprios. As regras que governam essa separação (banco por serviço, contratos versionados, emissão de tokens pelo Núcleo etc.) estão nos [requisitos de arquitetura](./docs/requisitos-gerais.md#32-microsserviços).
+Cada serviço tem código, build, banco de dados e implantação próprios. As regras que governam essa separação (banco por serviço, contratos versionados, emissão de tokens pelo Núcleo etc.) estão nos [requisitos de arquitetura](./docs/requisitos/GERAIS.md#32-microsserviços).
 
 ### Decisões de arquitetura
 
@@ -47,13 +47,13 @@ Cada serviço tem código, build, banco de dados e implantação próprios. As r
 | --- | --- |
 | Microsserviços | Um serviço por módulo de negócio, no formato monorepo (uma pasta por serviço). Cada serviço é autocontido e pode ser separado em repositório próprio sem mudança de código. |
 | API REST *stateless* | Versionada em `/api/v1`, documentada em OpenAPI. |
-| Autenticação | JWT de acesso de curta duração e refresh token rotativo em cookie `HttpOnly`, emitidos pelo Núcleo. Detalhes em [RF-BE-001](./docs/requisitos-be.md#rf-be-001--autenticação-de-usuário-login). |
+| Autenticação | JWT de acesso de curta duração e refresh token rotativo em cookie `HttpOnly`, emitidos pelo Núcleo. Detalhes em [RF-BE-001](./docs/requisitos/backend/RF-BE-001.md). |
 | Frontend em JavaScript | Sem TypeScript. Contratos de dados são documentados por OpenAPI e *schemas* Zod. |
-| Estilos com Bootstrap | Toda a interface é construída sobre o Bootstrap 5, com a identidade visual aplicada no tema. Ver [requisitos do frontend](./docs/requisitos-fe.md#2-estilos-e-identidade-visual). |
+| Estilos com Bootstrap | Toda a interface é construída sobre o Bootstrap 5, com a identidade visual aplicada no tema. Ver [requisitos do frontend](./docs/requisitos/frontend/RNF-FE.md#2-estilos-e-identidade-visual). |
 | Mesma origem para a API | O navegador sempre chama a API por caminho relativo (`/api`): em desenvolvimento, o servidor do Vite repassa a chamada ao backend; em produção, o Netlify faz o repasse ao Render. Assim o cookie de refresh permanece *first-party* com `SameSite=Strict`. |
 | Implantação | Frontend no Netlify e backend no Render (seção [Implantação](#7-implantação)). |
 
-Decisões novas e relevantes DEVEM ser registradas como ADR em `docs/adr/` (ver [RNF-070](./docs/requisitos-gerais.md#39-documentação)).
+Decisões novas e relevantes DEVEM ser registradas como ADR em `docs/adr/` (ver [RNF-070](./docs/requisitos/GERAIS.md#39-documentação)).
 
 ## 3. Stack tecnológica
 
@@ -66,13 +66,18 @@ Decisões novas e relevantes DEVEM ser registradas como ADR em `docs/adr/` (ver 
 | Implantação | Netlify (frontend) e Render (backend, via Docker) |
 | IDE | Visual Studio Code, com extensões de linguagem e de assistente de IA |
 
-As versões de cada biblioteca são as do `pom.xml` e do `package.json`. Bibliotecas adicionais são introduzidas por cada requisito que as exige ([RNF-015](./docs/requisitos-gerais.md#33-dependências)).
+As versões de cada biblioteca são as do `pom.xml` e do `package.json`. Bibliotecas adicionais são introduzidas por cada requisito que as exige ([RNF-015](./docs/requisitos/GERAIS.md#33-dependências)).
 
 ## 4. Estrutura do projeto
 
 ```
 meunegocio360/
-├── docs/                         # requisitos (RF e RNF) e ADRs (docs/adr/)
+├── docs/
+│   ├── requisitos/
+│   │   ├── GERAIS.md             # RNF de todo o projeto, índice e template de RF
+│   │   ├── backend/              # RNF-BE.md e um arquivo por RF (RF-BE-NNN.md)
+│   │   └── frontend/             # RNF-FE.md e um arquivo por RF (RF-FE-NNN.md)
+│   └── adr/                      # registros de decisões de arquitetura (ADR)
 ├── meunegocio360-core/           # microsserviço Núcleo (Spring Boot)
 ├── meunegocio360-servicos/       # (futuro) microsserviço Serviços
 ├── meunegocio360-suprimentos/    # (futuro) microsserviço Suprimentos
@@ -121,7 +126,7 @@ meunegocio360-js/src
 └── test/                       # configuração e dados de teste (fase de testes)
 ```
 
-As regras que justificam essa organização estão em [RNF-010, RNF-011](./docs/requisitos-gerais.md#31-arquitetura-e-qualidade-de-código), [RNF-BE-01 a 05](./docs/requisitos-be.md) e [RNF-FE-01 a 09](./docs/requisitos-fe.md).
+As regras que justificam essa organização estão em [RNF-010, RNF-011](./docs/requisitos/GERAIS.md#31-arquitetura-e-qualidade-de-código), [RNF-BE-01 a 05](./docs/requisitos/backend/RNF-BE.md#1-arquitetura) e [RNF-FE-01 a 09](./docs/requisitos/frontend/RNF-FE.md#1-arquitetura).
 
 ## 5. Primeiros passos
 
@@ -160,12 +165,31 @@ A descrição de cada variável está comentada em [`.env.example`](./.env.examp
 | Raiz | `docker compose up -d` / `docker compose down` | Sobe / para o MySQL (mantém os dados). |
 | Raiz | `docker compose down -v` | Para e **apaga** os dados locais do banco. |
 | `meunegocio360-core` | `./mvnw verify` | Compila e executa as verificações do backend. |
-| `meunegocio360-core` | `./mvnw spotless:apply` | Formata o código (disponível a partir de [RF-BE-001](./docs/requisitos-be.md#rf-be-001--autenticação-de-usuário-login)). |
+| `meunegocio360-core` | `./mvnw spotless:apply` | Formata o código (disponível a partir de [RF-BE-001](./docs/requisitos/backend/RF-BE-001.md)). |
 | `meunegocio360-js` | `npm run lint` | Verifica o código com ESLint. |
 | `meunegocio360-js` | `npm run build` | Gera o build de produção em `dist/`. |
-| `meunegocio360-js` | `npm run format` | Formata com Prettier (disponível a partir de [RF-FE-001](./docs/requisitos-fe.md#rf-fe-001--fluxo-de-login-do-usuário)). |
+| `meunegocio360-js` | `npm run format` | Formata com Prettier (disponível a partir de [RF-FE-001](./docs/requisitos/frontend/RF-FE-001.md)). |
 
 Scripts de teste serão acrescentados na fase de testes (ver [Contribuições](#6-contribuições)).
+
+### Verificação manual da autenticação no Postman (RF-BE-001)
+
+1. Copie `.env.example` para `.env` e preencha `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `JWT_SECRET` (ao menos 32 bytes) e as senhas `SEED_*` (8 a 72 caracteres). Para testar por HTTP local, configure `APP_AUTH_COOKIE_SECURE=false`; essa opção só é permitida no perfil `dev`.
+2. Execute `docker compose up -d` e inicie o backend com o perfil `dev`. Crie um ambiente Postman com `baseUrl=http://localhost:8080` e `accessToken` vazio.
+3. Envie `POST {{baseUrl}}/api/v1/auth/login`, com `Content-Type: application/json` e corpo `{"email":"admin@meunegocio360.com.br","senha":"{{senhaAdmin}}"}`. Guarde a senha de seed em variável local/secret do Postman. Verifique `200`, `tokenType`, `expiresIn` e `usuario`; o `accessToken` deve ser salvo na variável de ambiente. O refresh deve aparecer somente no cookie `mn360_refresh`.
+4. Envie `GET {{baseUrl}}/api/v1/auth/me`; na aba **Authorization**, escolha autenticação por token e informe `{{accessToken}}`. Espere `200` e os mesmos dados de `usuario`. Sem autenticação, espere `401`, `WWW-Authenticate` e `application/problem+json`.
+5. Envie `POST {{baseUrl}}/api/v1/auth/refresh` sem corpo. O Postman deve enviar o cookie automaticamente. Confira `200`, novo access token e rotação do cookie; salve novamente o access token. O refresh token não deve aparecer no JSON.
+6. Envie `POST {{baseUrl}}/api/v1/auth/logout`; confira `204` e expiração do cookie. Uma nova chamada de refresh sem cookie deve responder `401` e limpar o cookie.
+7. Verifique validação com login inválido (`400`, `VALIDATION_ERROR`) e senha errada/e-mail inexistente (mesmo `401`, `INVALID_CREDENTIALS`). Para reuso: copie o cookie antigo antes de renovar, reutilize-o depois da rotação e confirme `401`; a família inteira deve deixar de renovar.
+8. Verifique bloqueio por último: faça cinco tentativas consecutivas com senha incorreta e confira `401`; a tentativa seguinte deve retornar `429`, `ACCOUNT_TEMPORARILY_LOCKED` e `Retry-After`. Para validar `403`, envie `Origin: https://origem-nao-permitida.example` em refresh/logout. Ambos os casos podem ser inspecionados no corpo de problema.
+
+Para salvar o token de acesso automaticamente nas respostas de login e refresh, use em **Scripts > Post-response**:
+
+```javascript
+if (pm.response.code === 200) {
+  pm.environment.set("accessToken", pm.response.json().accessToken);
+}
+```
 
 ### Conceitos de DevOps (introdutórios)
 
@@ -198,7 +222,7 @@ git switch main
 git merge --ff-only upstream/main
 git push origin main
 
-# Criar a branch do requisito
+# Criar a branch do requisito (o nome vem do campo "Branch" do arquivo do requisito)
 git switch -c feat/rf-be-001-login
 ```
 
@@ -206,7 +230,7 @@ git switch -c feat/rf-be-001-login
 
 | Etapa | O que fazer |
 | --- | --- |
-| **1. Requisitos** | Leia por inteiro o requisito em [`docs/`](./docs) (regras, contrato, critérios de aceite, pontos de atenção e dependências introduzidas). Se o requisito ainda não existe, escreva-o com o [template](./docs/requisitos-gerais.md#22-template-de-requisito) e peça à IA que aponte ambiguidades e lacunas **antes** de codar. Dúvidas viram perguntas, não suposições. |
+| **1. Requisitos** | Leia por inteiro o requisito em [`docs/requisitos/`](./docs/requisitos) (regras, contrato, critérios de aceite, pontos de atenção e dependências introduzidas). Se o requisito ainda não existe, escreva-o com o [template](./docs/requisitos/GERAIS.md#22-template-de-requisito) e peça à IA que aponte ambiguidades e lacunas **antes** de codar. Dúvidas viram perguntas, não suposições. |
 | **2. Geração de código** | Peça à IA um plano em passos pequenos e verificáveis, revise-o e implemente em incrementos pequenos, com commits frequentes. Dê à IA o contexto necessário: o requisito, os RNFs aplicáveis e o [`AGENTS.md`](./AGENTS.md), que traz as regras de uso de IA no projeto. Faça só o que o requisito pede. |
 | **3. Testes** | Valide cada critério de aceite do requisito. Veja a observação abaixo. |
 | **4. Revisão** | Revise linha a linha o que a IA gerou (você responde pelo código), usando a lista de "pontos de atenção" do requisito. Antes de abrir o PR, execute localmente as verificações de qualidade (`./mvnw verify`; `npm run lint && npm run build`). Abra o PR do seu fork para a `main` do repositório principal e atenda aos comentários da revisão. |
@@ -239,7 +263,7 @@ git switch -c feat/rf-be-001-login
 Navegador ──► Netlify (SPA estática + repasse de /api/*) ──► Render (backend em Docker) ──► MySQL
 ```
 
-Os requisitos de implantação estão em [RNF-100 a RNF-105](./docs/requisitos-gerais.md#311-implantação). Para o ambiente próprio do seu fork, crie os serviços abaixo apontando para o **seu fork** e a branch do requisito.
+Os requisitos de implantação estão em [RNF-100 a RNF-105](./docs/requisitos/GERAIS.md#311-implantação). Para o ambiente próprio do seu fork, crie os serviços abaixo apontando para o **seu fork** e a branch do requisito.
 
 ### 7.1 Backend no Render
 
@@ -261,7 +285,7 @@ USER 1001
 ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
 
-No painel do Render, crie um **Web Service** com *Language* `Docker`, *Root Directory* `meunegocio360-core` e *Health Check Path* `/actuator/health`. O Render informa a porta pela variável `PORT` (a aplicação deve usá-la, [RNF-101](./docs/requisitos-gerais.md#311-implantação)). Em *Environment*, configure as mesmas variáveis do [`.env.example`](./.env.example), com estes valores específicos de produção:
+No painel do Render, crie um **Web Service** com *Language* `Docker`, *Root Directory* `meunegocio360-core` e *Health Check Path* `/actuator/health`. O Render informa a porta pela variável `PORT` (a aplicação deve usá-la, [RNF-101](./docs/requisitos/GERAIS.md#311-implantação)). Em *Environment*, configure as mesmas variáveis do [`.env.example`](./.env.example), com estes valores específicos de produção:
 
 | Variável | Valor em produção |
 | --- | --- |
@@ -308,14 +332,16 @@ Em *Environment variables*, defina `VITE_API_BASE_URL=/api/v1`.
 
 ### 7.4 Limitações do plano gratuito e *rollback*
 
-- Um *Web Service* gratuito do Render é suspenso após 15 minutos sem tráfego e leva cerca de 1 minuto para voltar. O repasse do Netlify tem limite de 26 segundos por requisição, então a **primeira requisição após a suspensão pode falhar**. O frontend trata isso com a tela de "Tentar novamente" na restauração de sessão ([RF-FE-001](./docs/requisitos-fe.md#rf-fe-001--fluxo-de-login-do-usuário)); a segunda tentativa encontra o serviço ativo. Para uso contínuo, utilize uma instância paga.
+- Um *Web Service* gratuito do Render é suspenso após 15 minutos sem tráfego e leva cerca de 1 minuto para voltar. O repasse do Netlify tem limite de 26 segundos por requisição, então a **primeira requisição após a suspensão pode falhar**. O frontend trata isso com a tela de "Tentar novamente" na restauração de sessão ([RF-FE-001](./docs/requisitos/frontend/RF-FE-001.md)); a segunda tentativa encontra o serviço ativo. Para uso contínuo, utilize uma instância paga.
 - Para desfazer um deploy com problema, reimplante um deploy anterior pelos painéis do Render e do Netlify.
 
 ## 8. Documentação
 
 | Documento | Conteúdo |
 | --- | --- |
-| [`docs/requisitos-gerais.md`](./docs/requisitos-gerais.md) | Requisitos não funcionais válidos para todo o projeto, índice de requisitos funcionais e template de requisito. |
-| [`docs/requisitos-be.md`](./docs/requisitos-be.md) | Requisitos não funcionais e funcionais do backend (inclui RF-BE-001, login). |
-| [`docs/requisitos-fe.md`](./docs/requisitos-fe.md) | Requisitos não funcionais e funcionais do frontend (inclui RF-FE-001, login). |
+| [`docs/requisitos/GERAIS.md`](./docs/requisitos/GERAIS.md) | Requisitos não funcionais válidos para todo o projeto, índice dos requisitos funcionais e template de requisito. |
+| [`docs/requisitos/backend/RNF-BE.md`](./docs/requisitos/backend/RNF-BE.md) | Requisitos não funcionais do backend (arquitetura, API REST, persistência, configuração e segurança). |
+| [`docs/requisitos/backend/`](./docs/requisitos/backend) | Um arquivo por requisito funcional do backend: `RF-BE-001.md` (login), `RF-BE-002.md` (empresa e perfis), `RF-BE-003.md` (clientes), `RF-BE-004.md` (fornecedores) e `RF-BE-005.md` (catálogo). |
+| [`docs/requisitos/frontend/RNF-FE.md`](./docs/requisitos/frontend/RNF-FE.md) | Requisitos não funcionais do frontend (arquitetura, estilos e identidade visual, camada HTTP, formulários e segurança). |
+| [`docs/requisitos/frontend/`](./docs/requisitos/frontend) | Um arquivo por requisito funcional do frontend: `RF-FE-001.md` a `RF-FE-005.md`, correspondentes aos do backend. |
 | [`AGENTS.md`](./AGENTS.md) | Instruções para assistentes de IA que trabalham no repositório. |

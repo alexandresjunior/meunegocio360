@@ -1,0 +1,82 @@
+// Tema do Bootstrap 5 com a identidade do MeuNegocio360 (requisitos-fe.md, seção 2;
+// RNF-FE-07, RNF-FE-08). Cores, fontes e tamanhos são definidos SOMENTE aqui.
+
+@use 'sass:map';
+
+@import 'bootstrap/scss/functions';
+
+// ---------------------------------------------------------------- paleta (2.1)
+$mn-laranja: #ec4e26;
+$mn-creme: #fcf5f0;
+$mn-cinza: #4a3f39;
+$mn-preto: #1f1612;
+$mn-rodape: #cdbbae;
+
+$primary: $mn-laranja;
+$danger: #b02a37; // 6,0:1 sobre o Creme (2.2)
+$success: #146c43; // 6,0:1 sobre o Creme (2.2)
+
+$body-bg: $mn-creme;
+$body-color: $mn-preto;
+$body-secondary-color: $mn-cinza;
+$border-color: $mn-cinza;
+$card-bg: $mn-creme;
+$card-border-color: $mn-cinza;
+$table-border-color: $mn-cinza;
+
+// Texto Preto sobre o Laranja em .btn-primary: com o mínimo de 4,5:1 (padrão),
+// o Bootstrap escolhe automaticamente $color-contrast-dark (2.2).
+$min-contrast-ratio: 4.5;
+$color-contrast-dark: $mn-preto;
+
+// Links em Preto e sempre sublinhados: Laranja sobre Creme não atinge 4,5:1 (2.2).
+$link-color: $mn-preto;
+$link-hover-color: $mn-cinza;
+$link-decoration: underline;
+
+// Anel de foco opaco em Preto: 16,5:1 sobre o Creme e 4,8:1 sobre o Laranja
+// (mínimo 3:1, RNF-FE-23). Em campos inválidos o Bootstrap usa $danger opaco.
+$focus-ring-opacity: 1;
+$focus-ring-color: $mn-preto;
+
+// ---------------------------------------------------------------- tipografia (2.3)
+$font-family-sans-serif:
+  'Barlow',
+  system-ui,
+  -apple-system,
+  'Segoe UI',
+  Roboto,
+  'Helvetica Neue',
+  Arial,
+  sans-serif;
+$font-weight-base: 400;
+$font-size-base: 1rem; // mínimo de 16 px
+$headings-font-family: 'Barlow Condensed', $font-family-sans-serif;
+$headings-font-weight: 600;
+
+@import 'bootstrap/scss/variables';
+@import 'bootstrap/scss/variables-dark';
+
+// Cor do rodapé no mapa de cores do tema (gera .bg-footer, .text-bg-footer...).
+$theme-colors: map.merge(
+  $theme-colors,
+  (
+    'footer': $mn-rodape,
+  )
+);
+
+@import 'bootstrap/scss/bootstrap';
+
+// ---------------------------------------------------------------- complementos
+// Somente o que o Bootstrap não cobre, sempre com variáveis do tema.
+
+.mn-auth-card {
+  max-width: 26rem;
+}
+
+.mn-auth-logo {
+  max-width: 14rem;
+  height: auto;
+}
+
+// prefers-reduced-motion (RNF-FE-26) já é tratado pelo Bootstrap ($enable-reduced-motion).

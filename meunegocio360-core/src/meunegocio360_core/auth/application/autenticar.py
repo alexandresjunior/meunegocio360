@@ -53,7 +53,16 @@ class Autenticar:
                 _log.info("Login recusado: conta bloqueada (usuario_id=%s)", usuario.id)
                 raise ContaTemporariamenteBloqueadaError(usuario.segundos_ate_desbloqueio(agora))
 
-            if not self._codificador.confere(senha, usuario.senha_hash):
+            # A senha é sempre conferida (tempo de resposta uniforme), mas um usuário inativo
+            # não acumula falhas nem é bloqueado: assim ele recebe o mesmo 401 de um e-mail
+            # inexistente e nunca um 429 que revelaria a conta (RN-03).
+            senha_confere = self._codificador.confere(senha, usuario.senha_hash)
+
+            if not usuario.ativo:
+                _log.info("Login recusado: usuário inativo (usuario_id=%s)", usuario.id)
+                raise CredenciaisInvalidasError
+
+            if not senha_confere:
                 bloqueou = usuario.registrar_falha_de_login(
                     agora,
                     max_tentativas=self._politica.max_tentativas,
@@ -67,10 +76,6 @@ class Autenticar:
                     _log.warning("Conta bloqueada por tentativas (usuario_id=%s)", usuario.id)
                 else:
                     _log.info("Login recusado: senha incorreta (usuario_id=%s)", usuario.id)
-                raise CredenciaisInvalidasError
-
-            if not usuario.ativo:
-                _log.info("Login recusado: usuário inativo (usuario_id=%s)", usuario.id)
                 raise CredenciaisInvalidasError
 
             usuario.registrar_login(agora)

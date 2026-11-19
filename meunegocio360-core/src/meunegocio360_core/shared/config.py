@@ -84,8 +84,17 @@ class Configuracao(ConfiguracaoBanco):
     def _validar_por_ambiente(self) -> "Configuracao":
         if not self.app_auth_cookie_secure and self.app_env != "dev":
             raise ValueError("APP_AUTH_COOKIE_SECURE=false só é permitido com APP_ENV=dev")
-        if self.app_env == "dev" and not (self.seed_admin_senha and self.seed_usuario_senha):
-            raise ValueError("SEED_ADMIN_SENHA e SEED_USUARIO_SENHA são obrigatórias em dev")
+        if self.app_env == "dev":
+            if not (self.seed_admin_senha and self.seed_usuario_senha):
+                raise ValueError("SEED_ADMIN_SENHA e SEED_USUARIO_SENHA são obrigatórias em dev")
+            # Mesmo limite do login (RN-11): uma senha de seed fora dele criaria um usuário
+            # que nunca consegue entrar.
+            for nome, senha in (
+                ("SEED_ADMIN_SENHA", self.seed_admin_senha),
+                ("SEED_USUARIO_SENHA", self.seed_usuario_senha),
+            ):
+                if not 8 <= len(senha.get_secret_value()) <= 72:
+                    raise ValueError(f"{nome} deve ter entre 8 e 72 caracteres")
         return self
 
     @property

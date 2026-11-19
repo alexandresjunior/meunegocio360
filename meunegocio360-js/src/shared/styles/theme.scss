@@ -79,4 +79,13 @@ $theme-colors: map.merge(
   height: auto;
 }
 
+// Alvos interativos com pelo menos 44×44 px (RNF-FE-23).
+$mn-alvo-minimo: 2.75rem; // 44 px
+
+.btn,
+.form-control,
+.form-select {
+  min-height: $mn-alvo-minimo;
+}
+
 // prefers-reduced-motion (RNF-FE-26) já é tratado pelo Bootstrap ($enable-reduced-motion).

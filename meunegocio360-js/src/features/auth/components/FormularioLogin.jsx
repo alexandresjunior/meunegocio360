@@ -79,9 +79,15 @@ export function FormularioLogin() {
           aria-describedby={errors.email ? 'login-email-erro' : undefined}
           {...register('email')}
         />
-        <Form.Control.Feedback type="invalid" id="login-email-erro">
-          {errors.email?.message}
-        </Form.Control.Feedback>
+        {errors.email && (
+          <Form.Control.Feedback
+            type="invalid"
+            id="login-email-erro"
+            role="alert"
+          >
+            {errors.email.message}
+          </Form.Control.Feedback>
+        )}
       </Form.Group>
 
       <Form.Group className="mb-4" controlId="login-senha">
@@ -95,9 +101,15 @@ export function FormularioLogin() {
           aria-describedby={errors.senha ? 'login-senha-erro' : undefined}
           {...register('senha')}
         />
-        <Form.Control.Feedback type="invalid" id="login-senha-erro">
-          {errors.senha?.message}
-        </Form.Control.Feedback>
+        {errors.senha && (
+          <Form.Control.Feedback
+            type="invalid"
+            id="login-senha-erro"
+            role="alert"
+          >
+            {errors.senha.message}
+          </Form.Control.Feedback>
+        )}
       </Form.Group>
 
       <Button

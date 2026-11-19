@@ -9,7 +9,8 @@ export const esquemaLogin = z.object({
     .string()
     .trim()
     .min(1, 'Informe seu e-mail.')
-    .max(160, 'O e-mail deve ter no máximo 160 caracteres.')
+    // A spec só prevê duas mensagens para o e-mail; acima de 160 caracteres ele é inválido.
+    .max(160, 'Informe um e-mail válido.')
     .pipe(z.email('Informe um e-mail válido.')),
   senha: z
     .string()

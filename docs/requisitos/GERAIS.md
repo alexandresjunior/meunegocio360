@@ -16,7 +16,8 @@ Convenções de leitura:
 
 - As palavras **DEVE**, **NÃO DEVE**, **DEVERIA** e **PODE** seguem o sentido da RFC 2119: *DEVE* é obrigatório, *DEVERIA* é fortemente recomendado (desvios exigem justificativa no *Pull Request* - PR) e *PODE* é opcional.
 - Cada requisito tem um identificador estável e rastreável: `RNF-xxx` (não funcionais, válidos em todo o projeto), `RNF-BE-xx` e `RNF-FE-xx` (não funcionais de cada camada), `RF-BE-xxx` (funcional de backend) e `RF-FE-xxx` (funcional de frontend). Commits, PRs e documentação **DEVEM** citar o ID do requisito atendido.
-- Os arquivos `pom.xml` e `package.json` são a fonte da verdade para versões de bibliotecas.
+- Os arquivos `pyproject.toml`/`uv.lock` e `package.json` são a fonte da verdade para versões de bibliotecas.
+- **Stack deste fork:** os requisitos vêm do repositório de origem (Java/Spring/MySQL) e foram adaptados para Python 3.13, FastAPI, SQLAlchemy 2.x, Alembic, PostgreSQL 18 e uv. As regras de negócio, contratos e critérios de aceite são os mesmos; só mudam os nomes das ferramentas.
 
 ## 2. Requisitos funcionais
 
@@ -112,7 +113,7 @@ Os requisitos desta seção são **aplicados progressivamente**: valem desde o i
 
 | ID | Requisito |
 | --- | --- |
-| RNF-015 | Bibliotecas e ferramentas são acrescentadas ao `pom.xml` e ao `package.json` **no requisito que as exige**, e não antecipadamente. O projeto parte da base mínima gerada (Spring Initializr e Vite). Cada requisito lista, em "Dependências introduzidas", o que traz consigo. |
+| RNF-015 | Bibliotecas e ferramentas são acrescentadas ao `pyproject.toml` (via `uv add`) e ao `package.json` **no requisito que as exige**, e não antecipadamente. O projeto parte de uma base mínima (esqueleto FastAPI e projeto gerado pelo Vite). Cada requisito lista, em "Dependências introduzidas", o que traz consigo. |
 | RNF-016 | Requisitos não funcionais que dependem de uma ferramenta ainda não introduzida (por exemplo, testes automatizados, cobertura ou verificação automática de acessibilidade) passam a ser exigíveis **a partir do requisito ou da fase que introduz a ferramenta**. Os demais valem desde o início. |
 
 ### 3.4 Segurança e privacidade
@@ -134,7 +135,7 @@ Referência: **OWASP ASVS nível 1** e **OWASP Top 10**.
 
 | ID | Requisito | Como verificar |
 | --- | --- | --- |
-| RNF-030 | Toda API DEVE ser documentada em OpenAPI (springdoc), com exemplos de sucesso e de erro, e disponível em `/swagger-ui.html` fora de produção. | Revisão; abertura da UI. |
+| RNF-030 | Toda API DEVE ser documentada em OpenAPI (gerado pelo FastAPI a partir das rotas e dos modelos Pydantic), com exemplos de sucesso e de erro, e disponível em `/swagger-ui.html` fora de produção. | Revisão; abertura da UI. |
 | RNF-032 | Mudanças incompatíveis no contrato DEVEM gerar nova versão de caminho (`/api/v2`). Mudanças compatíveis (campos opcionais novos) não. | Revisão. |
 | RNF-033 | Datas e horas trafegam em **ISO 8601 UTC** (ex.: `2026-11-11T14:30:00Z`); valores monetários como inteiros em centavos ou decimais em *string*, nunca `float`. | Revisão; testes de serialização. |
 
@@ -156,8 +157,8 @@ Os requisitos de testes automatizados são exigíveis a partir da **fase de test
 | ID | Requisito | Como verificar |
 | --- | --- | --- |
 | RNF-050 | Logs DEVERIAM ser estruturados (JSON) fora do ambiente de desenvolvimento, com nível adequado e **identificador de correlação** (`X-Request-Id`) propagado entre frontend e backend. | Inspeção de logs. |
-| RNF-051 | O backend DEVE expor *health checks* (Actuator `/actuator/health`) sem detalhes sensíveis. | Verificação manual. |
-| RNF-052 | A configuração DEVE seguir *12-factor*: mesmo artefato para todos os ambientes, diferenças apenas por variáveis de ambiente e perfis (`dev`, `test`, `prod`; arquivos `application.yaml` e `application-{perfil}.yaml`). | Revisão. |
+| RNF-051 | O backend DEVE expor *health checks* (`/actuator/health`, caminho mantido do projeto de origem) sem detalhes sensíveis. | Verificação manual. |
+| RNF-052 | A configuração DEVE seguir *12-factor*: mesmo artefato para todos os ambientes, diferenças apenas por variáveis de ambiente e ambientes (`dev`, `test`, `prod`, escolhidos pela variável `APP_ENV` e lidos com pydantic-settings). | Revisão. |
 | RNF-053 | Endpoints de leitura DEVERIAM responder em p95 ≤ 500 ms e o login em p95 ≤ 800 ms (excluindo o custo intencional do hash de senha) em ambiente local com dados de teste. | Medição manual. |
 | RNF-054 | Listagens DEVEM ser **paginadas** no servidor; nunca retornar coleções ilimitadas. | Verificação dos critérios de aceite. |
 
@@ -181,9 +182,9 @@ Os requisitos de testes automatizados são exigíveis a partir da **fase de test
 
 | ID | Requisito |
 | --- | --- |
-| RNF-080 | IDE padrão: VS Code, com extensões de linguagem (Java e ESLint) e de assistente de IA. |
-| RNF-081 | O ambiente local DEVE subir com `docker compose up -d` (MySQL do Núcleo; cada novo serviço acrescenta seu próprio banco) e variáveis definidas a partir do `.env.example`. O arquivo `.env` NUNCA é versionado. |
-| RNF-082 | Formatação automática obrigatória: Spotless (google-java-format) no backend e Prettier + ESLint no frontend (ferramentas introduzidas por `RF-BE-001` e `RF-FE-001`, conforme RNF-015). |
+| RNF-080 | IDE padrão: VS Code, com extensões de linguagem (Python, Ruff e ESLint) e de assistente de IA. |
+| RNF-081 | O ambiente local DEVE subir com `docker compose up -d` (PostgreSQL do Núcleo; cada novo serviço acrescenta seu próprio banco) e variáveis definidas a partir do `.env.example`. O arquivo `.env` NUNCA é versionado. |
+| RNF-082 | Formatação automática obrigatória: Ruff (`ruff format` e `ruff check`) no backend e Prettier + ESLint no frontend (ferramentas introduzidas por `RF-BE-001` e `RF-FE-001`, conforme RNF-015). |
 | RNF-083 | O arquivo `AGENTS.md` na raiz DEVE orientar os assistentes de IA sobre como trabalhar no projeto e apontar para o README e para estes requisitos, sem repeti-los. |
 
 ### 3.11 Implantação
@@ -192,7 +193,7 @@ Frontend no Netlify e backend no Render (passo a passo no [`README.md`](../../RE
 
 | ID | Requisito |
 | --- | --- |
-| RNF-100 | Cada serviço de backend DEVE ter um `Dockerfile` *multi-stage* na própria pasta, que gera a imagem executável sem depender de arquivos fora dela (o Render executa Java via Docker). |
+| RNF-100 | Cada serviço de backend DEVE ter um `Dockerfile` *multi-stage* na própria pasta, que gera a imagem executável sem depender de arquivos fora dela (o Render executa o backend via Docker). |
 | RNF-101 | A aplicação DEVE escutar na porta informada pela variável `PORT` (padrão 8080 em desenvolvimento). |
 | RNF-102 | Toda configuração de produção DEVE vir de variáveis de ambiente configuradas nos painéis do Netlify e do Render (RNF-022, RNF-052). Valores de `dev` (como o *seed*) NUNCA são habilitados em produção. |
 | RNF-103 | O frontend DEVE ser um build estático (`npm run build`, saída `dist/`) servido com *fallback* para as rotas da SPA e DEVE chamar a API **sempre por caminho relativo** (`/api/...`, mesma origem do frontend): em desenvolvimento, pelo `server.proxy` do Vite; em produção, por regra de *rewrite* do Netlify para o Render. O cookie de refresh NUNCA DEVE exigir `SameSite=None`. |

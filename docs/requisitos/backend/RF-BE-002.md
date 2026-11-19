@@ -28,11 +28,11 @@ Como **administrador**, quero **cadastrar os dados da minha empresa (razão soci
 
 ## Dependências introduzidas
 
-Nenhuma biblioteca nova. O requisito reutiliza Flyway, Spring Security, validação e springdoc já introduzidos por [RF-BE-001](./RF-BE-001.md) (RNF-015). Variável de ambiente nova: `SEED_FINANCEIRO_SENHA` (somente `dev`, já documentada no `.env.example`). `SEED_USUARIO_SENHA` passa a ser a senha do usuário `OPERADOR_COMERCIAL`.
+Nenhuma biblioteca nova. O requisito reutiliza Alembic, SQLAlchemy, a autenticação e a validação (Pydantic) já introduzidas por [RF-BE-001](./RF-BE-001.md) (RNF-015). Variável de ambiente nova: `SEED_FINANCEIRO_SENHA` (somente `dev`, já documentada no `.env.example`). `SEED_USUARIO_SENHA` passa a ser a senha do usuário `OPERADOR_COMERCIAL`.
 
 ## Decisões de modelo
 
-- **Modelo de empresa única ativa:** o sistema atende **uma empresa por instalação**. Pode haver empresas inativas (histórico), mas **no máximo uma ativa**, garantido pelo banco (índice único sobre coluna gerada, ver "Modelo de dados"). A evolução para multiempresa é uma extensão opcional.
+- **Modelo de empresa única ativa:** o sistema atende **uma empresa por instalação**. Pode haver empresas inativas (histórico), mas **no máximo uma ativa**, garantido pelo banco (índice único parcial, ver "Modelo de dados"). A evolução para multiempresa é uma extensão opcional.
 - **`empresa_id` resolvido no servidor:** os demais requisitos NUNCA recebem `empresa_id` do cliente (RNF-096). Eles obtêm a empresa ativa pelo componente `EmpresaAtiva`, que lança `COMPANY_NOT_ACTIVE` (`422`) quando não existe empresa ativa.
 
 ## Regras de negócio
@@ -106,14 +106,14 @@ Corpo `{ "ativa": false, "versao": 3 }`. Inativa ou reativa a empresa (RN-02 e R
 
 ## Modelo de dados
 
-Migrations novas, em sequência à `V2` (RNF-BE-20; os números abaixo são ilustrativos):
+Migrations novas, em sequência à `0002` (RNF-BE-20; os números abaixo são ilustrativos):
 
-- **`V3__ajustar_perfis_usuario.sql`:** `UPDATE usuario SET perfil = 'OPERADOR_COMERCIAL' WHERE perfil = 'USUARIO'`. O *runner* de seed (`SeedUsuariosDev`) passa a criar também o usuário `OPERADOR_FINANCEIRO`, com `SEED_FINANCEIRO_SENHA`.
-- **`V4__criar_tabela_empresa.sql`**, nomes ilustrativos:
+- **`0003_ajustar_perfis_usuario.py`:** `UPDATE usuario SET perfil = 'OPERADOR_COMERCIAL' WHERE perfil = 'USUARIO'`. O seed de desenvolvimento (`SemearUsuariosDeDesenvolvimento`) passa a criar também o usuário `OPERADOR_FINANCEIRO`, com `SEED_FINANCEIRO_SENHA`.
+- **`0004_criar_tabela_empresa.py`**, nomes ilustrativos:
 
 | Coluna | Tipo | Restrições |
 | --- | --- | --- |
-| `id` | `BINARY(16)` | PK (`pk_empresa`) |
+| `id` | `UUID` | PK (`pk_empresa`) |
 | `razao_social` | `VARCHAR(150)` | `NOT NULL` |
 | `nome_fantasia` | `VARCHAR(150)` | `NULL` |
 | `cnpj` | `CHAR(14)` | `NOT NULL`, único (`uk_empresa_cnpj`) |
@@ -122,8 +122,9 @@ Migrations novas, em sequência à `V2` (RNF-BE-20; os números abaixo são ilus
 | `fuso_horario` | `VARCHAR(50)` | `NOT NULL`, padrão `America/Sao_Paulo` |
 | `moeda` | `CHAR(3)` | `NOT NULL`, padrão `BRL` |
 | `ativa` | `BOOLEAN` | `NOT NULL`, padrão `TRUE` |
-| `ativa_unica` | `TINYINT` | Coluna gerada: `CASE WHEN ativa THEN 1 END` (`STORED`), com índice **único** (`uk_empresa_ativa_unica`): o MySQL aceita vários `NULL`, logo só uma linha pode ter `ativa = TRUE` |
 | `criado_em`, `atualizado_em`, `versao` | conforme RNF-BE-22 | `NOT NULL` |
+
+No máximo uma empresa ativa é garantida por um índice **único parcial**: `CREATE UNIQUE INDEX uk_empresa_ativa_unica ON empresa ((ativa)) WHERE ativa` (no projeto de origem, em MySQL, isso exigia uma coluna gerada).
 
 A tabela `empresa` é a única que **não** tem `empresa_id`. Todas as tabelas de negócio criadas depois dela têm (RNF-BE-26).
 
@@ -186,7 +187,7 @@ Cenário: Reativação com outra empresa ativa
 
 Cenário: Perfis migrados
   Dado um banco com um usuário de perfil USUARIO
-  Quando a migration V3 é aplicada
+  Quando a migration 0003 é aplicada
   Então esse usuário passa a ter o perfil OPERADOR_COMERCIAL
   E o login continua funcionando com a claim perfil "OPERADOR_COMERCIAL"
 
@@ -207,16 +208,16 @@ RNF-096, RNF-BE-15, RNF-BE-20, RNF-BE-23, RNF-BE-26, RNF-BE-27, RNF-BE-28, RNF-B
 Implementados na fase de testes (RNF-016). Até lá, os critérios de aceite são verificados manualmente na Swagger UI.
 
 - **Unitários:** validador de CNPJ (válidos, inválidos, sequências repetidas), regras RN-02 e RN-04, `EmpresaAtiva`.
-- **Web (`MockMvc`):** matriz de autorização por perfil e formato de erros.
-- **Integração (Testcontainers):** unicidade de CNPJ e de empresa ativa (índice da coluna gerada), migration V3 sobre dados existentes.
+- **Web (`TestClient` do FastAPI):** matriz de autorização por perfil e formato de erros.
+- **Integração (Testcontainers com PostgreSQL):** unicidade de CNPJ e de empresa ativa (índice único parcial), migration 0003 sobre dados existentes.
 - **Arquitetura:** nenhuma feature acessa o repositório da empresa diretamente; todas usam `EmpresaAtiva`.
 
 ## Pontos de atenção ao revisar código gerado por IA
 
 - `empresa_id` recebido no corpo ou na URL de outros recursos, em vez de resolvido no servidor.
 - Unicidade de "uma empresa ativa" garantida só por `if` na aplicação (condição de corrida): ela DEVE existir também no banco.
-- Editar a migration `V1`/`V2` em vez de criar a `V3`; perfis como `String` solta em vez de um `enum`.
-- Perfis validados só no frontend, ou `@PreAuthorize` ausente em algum método de escrita.
+- Editar a migration `0001`/`0002` em vez de criar a `0003`; perfis como `String` solta em vez de um `enum`.
+- Perfis validados só no frontend, ou dependência de perfil ausente em alguma rota de escrita.
 - `DELETE` físico da empresa, ou erro `500` genérico em vez de `COMPANY_CNPJ_DUPLICATE` quando o banco rejeita a duplicidade.
 - Validador de CNPJ que aceita sequências repetidas (`00000000000000`) ou ignora os dígitos verificadores.
 - Criar empresa de exemplo no *seed* (contraria a RN-08) ou senhas de seed escritas no código.

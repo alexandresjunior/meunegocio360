@@ -17,16 +17,17 @@ Como **usuário cadastrado do sistema**, quero **entrar com meu e-mail e minha s
 
 ## Dependências introduzidas
 
-O `pom.xml` gerado já contém a **base**: web MVC, Spring Data JPA, Spring Security, validação, springdoc, DevTools, driver MySQL e os *starters* de teste. Este requisito introduz (RNF-015):
+O esqueleto do serviço já contém a **base**: FastAPI, Uvicorn, Pydantic e pydantic-settings. Este requisito introduz (RNF-015):
 
 | Dependência | Para quê |
 | --- | --- |
-| Flyway (`flyway-core` + `flyway-mysql`) | Migrations de banco (RNF-BE-20) |
-| `spring-boot-starter-oauth2-resource-server` | Validação de JWT (Nimbus) no `SecurityFilterChain` e emissão com `JwtEncoder` |
-| Spring Boot Actuator | *Health check* (RNF-051, RNF-104) |
-| Spotless | Formatação (RNF-082) |
+| SQLAlchemy 2.x + `psycopg` | Persistência no PostgreSQL |
+| Alembic | Migrations de banco (RNF-BE-20) |
+| PyJWT | Emissão e validação do JWT (HS256) |
+| bcrypt | Hash de senha (RN-11) |
+| Ruff (grupo `dev`) | Formatação e lint (RNF-082) |
 
-Dependências de teste (Testcontainers, JaCoCo, ArchUnit) entram na fase de testes.
+O *health check* (RNF-051, RNF-104) é uma rota própria, sem biblioteca. Dependências de teste (pytest, Testcontainers, pytest-cov) entram na fase de testes.
 
 ## Regras de negócio
 
@@ -122,35 +123,35 @@ Os endpoints `/auth/refresh` e `/auth/logout` DEVEM rejeitar com `403` (`code: "
 
 ## Modelo de dados
 
-Migration `V1__criar_tabela_usuario.sql` (nomes ilustrativos):
+Migration `0001_criar_tabela_usuario.py` (nomes ilustrativos):
 
 | Coluna | Tipo | Restrições |
 | --- | --- | --- |
-| `id` | `BINARY(16)` (UUID) | PK |
+| `id` | `UUID` | PK |
 | `nome` | `VARCHAR(120)` | `NOT NULL` |
 | `email` | `VARCHAR(160)` | `NOT NULL`, `UNIQUE` |
 | `senha_hash` | `VARCHAR(100)` | `NOT NULL` (BCrypt, formato `{bcrypt}...`) |
 | `perfil` | `VARCHAR(20)` | `NOT NULL` (`ADMIN`, `USUARIO`) |
 | `ativo` | `BOOLEAN` | `NOT NULL`, padrão `TRUE` |
 | `tentativas_falhas` | `INT` | `NOT NULL`, padrão `0` |
-| `bloqueado_ate` | `DATETIME(6)` | nulo (UTC) |
-| `ultimo_login_em` | `DATETIME(6)` | nulo (UTC) |
-| `criado_em`, `atualizado_em` | `DATETIME(6)` | `NOT NULL` (UTC) |
+| `bloqueado_ate` | `TIMESTAMPTZ` | nulo (UTC) |
+| `ultimo_login_em` | `TIMESTAMPTZ` | nulo (UTC) |
+| `criado_em`, `atualizado_em` | `TIMESTAMPTZ` | `NOT NULL` (UTC) |
 | `versao` | `BIGINT` | `NOT NULL` (controle otimista) |
 
-Migration `V2__criar_tabela_refresh_token.sql`:
+Migration `0002_criar_tabela_refresh_token.py`:
 
 | Coluna | Tipo | Restrições |
 | --- | --- | --- |
-| `id` | `BINARY(16)` (UUID) | PK |
-| `usuario_id` | `BINARY(16)` | `NOT NULL`, FK para `usuario`, indexada |
-| `familia_id` | `BINARY(16)` | `NOT NULL`, indexada (agrupa a cadeia de rotações de uma sessão) |
+| `id` | `UUID` | PK |
+| `usuario_id` | `UUID` | `NOT NULL`, FK para `usuario`, indexada |
+| `familia_id` | `UUID` | `NOT NULL`, indexada (agrupa a cadeia de rotações de uma sessão) |
 | `token_hash` | `CHAR(64)` | `NOT NULL`, `UNIQUE` (SHA-256 em hexadecimal) |
-| `expira_em` | `DATETIME(6)` | `NOT NULL` (UTC) |
-| `revogado_em` | `DATETIME(6)` | nulo (UTC); preenchido na rotação, no logout ou na revogação da família |
-| `criado_em` | `DATETIME(6)` | `NOT NULL` (UTC) |
+| `expira_em` | `TIMESTAMPTZ` | `NOT NULL` (UTC) |
+| `revogado_em` | `TIMESTAMPTZ` | nulo (UTC); preenchido na rotação, no logout ou na revogação da família |
+| `criado_em` | `TIMESTAMPTZ` | `NOT NULL` (UTC) |
 
-Tokens expirados ou revogados há mais de 30 dias DEVEM ser removidos por uma rotina agendada (`@Scheduled`). Não registrar IP nem *user-agent* (minimização de dados, RNF-025).
+Tokens expirados ou revogados há mais de 30 dias DEVEM ser removidos por uma rotina agendada (tarefa periódica iniciada com a aplicação e o comando `meunegocio360-limpar-tokens`, para agendamento externo). Não registrar IP nem *user-agent* (minimização de dados, RNF-025).
 
 **Seed de desenvolvimento (somente perfil `dev`):** um usuário `ADMIN` e um `USUARIO`, com e-mails fictícios e senhas lidas de variáveis de ambiente (`SEED_ADMIN_SENHA`, `SEED_USUARIO_SENHA`). Senhas de seed NÃO DEVEM ser gravadas em texto no repositório, nem existir em `prod`.
 
@@ -244,29 +245,29 @@ RNF-021, RNF-022, RNF-023, RNF-024, RNF-025, RNF-050, RNF-094, RNF-BE-14, RNF-BE
 
 Implementados na fase de testes (RNF-016). Até lá, os critérios de aceite são verificados manualmente.
 
-- **Unitários** (sem Spring): casos de uso de login, refresh e logout (sucesso, senha errada, usuário inexistente, inativo, bloqueio e desbloqueio por tempo, rotação, expiração, reuso e revogação de família), usando um `Clock` injetável; emissão e validação do JWT (expirado, adulterado, `alg` errado).
-- **Web** (`MockMvc`): contrato de todos os endpoints, atributos do cookie, formato `problem+json`, cabeçalhos `Retry-After` e `WWW-Authenticate`, verificação de `Origin`.
-- **Integração** (Testcontainers MySQL + Flyway): migrations aplicam-se do zero, unicidade de e-mail e de `token_hash`, fluxo completo login → `me` → refresh → logout, reuso de token.
+- **Unitários** (sem FastAPI nem banco): casos de uso de login, refresh e logout (sucesso, senha errada, usuário inexistente, inativo, bloqueio e desbloqueio por tempo, rotação, expiração, reuso e revogação de família), usando um relógio injetável (`Relogio`); emissão e validação do JWT (expirado, adulterado, `alg` errado).
+- **Web** (`TestClient` do FastAPI): contrato de todos os endpoints, atributos do cookie, formato `problem+json`, cabeçalhos `Retry-After` e `WWW-Authenticate`, verificação de `Origin`.
+- **Integração** (Testcontainers com PostgreSQL + Alembic): migrations aplicam-se do zero, unicidade de e-mail e de `token_hash`, fluxo completo login → `me` → refresh → logout, reuso de token.
 - **Segurança:** mesma resposta (corpo e status) para e-mail inexistente e senha incorreta; endpoint arbitrário sem token retorna 401; o valor do refresh token nunca é gravado em claro no banco nem aparece em logs.
 - **Concorrência:** duas renovações simultâneas com o mesmo refresh token não podem produzir dois tokens válidos (apenas uma vence; a outra recebe 401).
-- **Arquitetura:** regra de camadas (ArchUnit) para a feature `auth`.
+- **Arquitetura:** regra de camadas verificada por teste (por exemplo, com import-linter) para a feature `auth`.
 
 ## Pontos de atenção ao revisar código gerado por IA
 
 Assistentes de IA costumam errar justamente aqui. Verifique, um a um:
 
 - Mensagens ou status diferentes para "e-mail não existe" e "senha errada" (enumeração de usuários).
-- Segredo JWT *hardcoded*, fraco ou com valor padrão no `application.yaml`.
+- Segredo JWT *hardcoded*, fraco ou com valor padrão no código ou no `.env.example`.
 - Refresh token devolvido no corpo da resposta, gravado em claro no banco, ou cookie sem `HttpOnly`/`SameSite`/`Path` restrito.
 - Refresh token **sem rotação** ou sem detecção de reuso; rotação sem transação ou sem bloqueio de concorrência (dois usos simultâneos gerando dois tokens válidos).
 - Cookie válido por mais tempo que o registro no banco, ou logout que apenas apaga o cookie sem revogar no servidor.
 - `allowedOrigins("*")` junto com credenciais, ou verificação de `Origin` ausente em `/auth/refresh`.
 - Senhas, tokens ou e-mails completos em logs; `toString()` de entidade ou DTO exibindo `senhaHash`/`tokenHash`.
 - Comparação de senha feita manualmente, em vez de usar `PasswordEncoder`; uso de MD5/SHA sem *salt* para senha (SHA-256 só é adequado para o refresh token, que já é aleatório e de alta entropia).
-- Entidade JPA devolvida diretamente na resposta; DTO com campos de hash.
-- `permitAll()` amplos demais (por exemplo, `/**`), ou rotas do Swagger/Actuator abertas em produção.
-- Validação do JWT sem checar algoritmo, emissor e expiração; uso de API ou biblioteca desatualizada ou inexistente na versão do Spring Boot em uso.
-- Contador de tentativas com condição de corrida, ou uso espalhado de `LocalDateTime.now()`/`Instant.now()`, o que torna os testes frágeis.
+- Entidade de domínio ou modelo SQLAlchemy devolvido diretamente na resposta; DTO com campos de hash.
+- Rotas públicas amplas demais (por exemplo, liberar um prefixo inteiro), ou rotas do Swagger/Actuator abertas em produção.
+- Validação do JWT sem checar algoritmo, emissor e expiração; uso de API ou biblioteca desatualizada ou inexistente na versão de PyJWT/FastAPI em uso.
+- Contador de tentativas com condição de corrida, ou uso espalhado de `datetime.now()`, o que torna os testes frágeis.
 - Testes que apenas verificam `status == 200`, sem validar o conteúdo do token, o cookie e os efeitos no banco.
 
 ## Extensões opcionais (desafios)

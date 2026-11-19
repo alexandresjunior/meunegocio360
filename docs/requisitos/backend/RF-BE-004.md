@@ -70,7 +70,7 @@ Objeto retornado: o mesmo de cliente (`id`, `tipoPessoa`, `nome`, `documento`, `
 
 ## Modelo de dados
 
-Migration `V6__criar_tabela_fornecedor.sql` (nomes ilustrativos): tabela `fornecedor` com as **mesmas colunas** de `cliente` ([RF-BE-003](./RF-BE-003.md#modelo-de-dados)), com `UNIQUE (empresa_id, documento)` (`uk_fornecedor_empresa_documento`), `INDEX (empresa_id, nome)` e `INDEX (empresa_id, ativo)`. Não há chave estrangeira entre `cliente` e `fornecedor`: são cadastros independentes.
+Migration `0006_criar_tabela_fornecedor.py` (nomes ilustrativos): tabela `fornecedor` com as **mesmas colunas** de `cliente` ([RF-BE-003](./RF-BE-003.md#modelo-de-dados)), com `UNIQUE (empresa_id, documento)` (`uk_fornecedor_empresa_documento`), `INDEX (empresa_id, nome)` e `INDEX (empresa_id, ativo)`. Não há chave estrangeira entre `cliente` e `fornecedor`: são cadastros independentes.
 
 ## Critérios de aceite
 
@@ -141,8 +141,8 @@ RNF-096, RNF-097, RNF-054, RNF-025, RNF-BE-15, RNF-BE-16, RNF-BE-26, RNF-BE-27, 
 Implementados na fase de testes (RNF-016). Até lá, os critérios de aceite são verificados manualmente na Swagger UI.
 
 - **Unitários:** RN-02 a RN-04 com `VerificadorVinculoFornecedor` simulado.
-- **Web (`MockMvc`):** matriz de perfis (inclusive a inversão em relação a clientes), erros e status.
-- **Integração (Testcontainers):** unicidade por empresa, independência entre `cliente` e `fornecedor`, busca e paginação.
+- **Web (`TestClient` do FastAPI):** matriz de perfis (inclusive a inversão em relação a clientes), erros e status.
+- **Integração (Testcontainers com PostgreSQL):** unicidade por empresa, independência entre `cliente` e `fornecedor`, busca e paginação.
 
 ## Pontos de atenção ao revisar código gerado por IA
 

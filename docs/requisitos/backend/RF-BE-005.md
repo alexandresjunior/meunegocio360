@@ -110,20 +110,20 @@ Entrada (`POST`/`PUT`): `tipo`, `codigo`, `nome`, `descricao`, `unidade`, `preco
 
 ## Modelo de dados
 
-Migration `V7__criar_tabelas_categoria_e_item_catalogo.sql` (nomes ilustrativos):
+Migration `0007_criar_tabelas_categoria_e_item_catalogo.py` (nomes ilustrativos):
 
-**`categoria`:** `id` (PK), `empresa_id` (FK `NOT NULL`), `nome` `VARCHAR(80)` (*collation* `utf8mb4_0900_ai_ci`), `ativo` `BOOLEAN` e as colunas padrão (RNF-BE-22). `UNIQUE (empresa_id, nome)`.
+**`categoria`:** `id` (PK), `empresa_id` (FK `NOT NULL`), `nome` `VARCHAR(80)` (*collation* `ci_ai` (RNF-BE-26)), `ativo` `BOOLEAN` e as colunas padrão (RNF-BE-22). `UNIQUE (empresa_id, nome)`.
 
 **`item_catalogo`:**
 
 | Coluna | Tipo | Restrições |
 | --- | --- | --- |
-| `id` | `BINARY(16)` | PK |
-| `empresa_id` | `BINARY(16)` | `NOT NULL`, FK para `empresa` |
-| `categoria_id` | `BINARY(16)` | `NULL`, FK para `categoria` (`fk_item_catalogo_categoria`), indexada |
+| `id` | `UUID` | PK |
+| `empresa_id` | `UUID` | `NOT NULL`, FK para `empresa` |
+| `categoria_id` | `UUID` | `NULL`, FK para `categoria` (`fk_item_catalogo_categoria`), indexada |
 | `tipo` | `VARCHAR(10)` | `NOT NULL` (`PRODUTO`, `SERVICO`) |
-| `codigo` | `VARCHAR(40)` | `NULL`; `UNIQUE (empresa_id, codigo)` (o MySQL aceita vários `NULL`) |
-| `nome` | `VARCHAR(150)` | `NOT NULL`, *collation* `utf8mb4_0900_ai_ci` |
+| `codigo` | `VARCHAR(40)` | `NULL`; `UNIQUE (empresa_id, codigo)` (o PostgreSQL aceita vários `NULL` em `UNIQUE`, comportamento padrão `NULLS DISTINCT`) |
+| `nome` | `VARCHAR(150)` | `NOT NULL`, *collation* `ci_ai` (RNF-BE-26) |
 | `descricao` | `VARCHAR(500)` | `NULL` |
 | `unidade` | `VARCHAR(6)` | `NOT NULL` |
 | `preco` | `DECIMAL(12,2)` | `NOT NULL`, `CHECK (preco >= 0)` |
@@ -242,15 +242,15 @@ RNF-096, RNF-097, RNF-033, RNF-054, RNF-BE-15, RNF-BE-16, RNF-BE-23, RNF-BE-26, 
 Implementados na fase de testes (RNF-016). Até lá, os critérios de aceite são verificados manualmente na Swagger UI.
 
 - **Unitários:** regras RN-02 a RN-09 (imutabilidade do tipo, categoria ativa, preço), conversão decimal sem perda, `VerificadorVinculoItem` simulado.
-- **Web (`MockMvc`):** matriz de perfis, formato dos erros, serialização de `preco` como *string*.
-- **Integração (Testcontainers):** `CHECK` de preço, unicidade de `codigo` e de nome de categoria, filtros combinados e garantia de que `tipo=PRODUTO` nunca retorna serviços.
+- **Web (`TestClient` do FastAPI):** matriz de perfis, formato dos erros, serialização de `preco` como *string*.
+- **Integração (Testcontainers com PostgreSQL):** `CHECK` de preço, unicidade de `codigo` e de nome de categoria, filtros combinados e garantia de que `tipo=PRODUTO` nunca retorna serviços.
 
 ## Pontos de atenção ao revisar código gerado por IA
 
-- `preco` como `double`/`float` ou `BigDecimal` serializado como número JSON; arredondamento implícito.
+- `preco` como `float` ou `Decimal` serializado como número JSON; arredondamento implícito.
 - Preço negativo bloqueado só no frontend, ou sem `CHECK` no banco.
 - `estoque_minimo` exposto no DTO "porque está na entidade", ou removido do banco "porque não é usado" (contraria RN-07).
-- Duas tabelas separadas (`produto` e `servico`) ou herança JPA complexa: o requisito pede **um catálogo** com o campo `tipo`.
+- Duas tabelas separadas (`produto` e `servico`) ou herança complexa no ORM (SQLAlchemy): o requisito pede **um catálogo** com o campo `tipo`.
 - Filtro por tipo feito no frontend, depois de trazer tudo; ou `tipo=PRODUTO` implementado como "tipo diferente de SERVICO" (quebra quando surgirem novos tipos).
 - Exclusão de categoria em cascata apagando itens; erro `500` em vez de `CATEGORY_IN_USE`.
 - `categoriaId` aceito de outra empresa (sem checar `empresa_id`); `sort` livre.

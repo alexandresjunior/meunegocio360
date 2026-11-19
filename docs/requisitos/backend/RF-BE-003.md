@@ -98,14 +98,14 @@ Corpo `{ "ativo": false, "versao": 2 }`. Inativa ou reativa.
 
 ## Modelo de dados
 
-Migration `V5__criar_tabela_cliente.sql` (nomes ilustrativos; o número segue a sequência real):
+Migration `0005_criar_tabela_cliente.py` (nomes ilustrativos; o número segue a sequência real):
 
 | Coluna | Tipo | Restrições |
 | --- | --- | --- |
-| `id` | `BINARY(16)` | PK (`pk_cliente`) |
-| `empresa_id` | `BINARY(16)` | `NOT NULL`, FK para `empresa` (`fk_cliente_empresa`) |
+| `id` | `UUID` | PK (`pk_cliente`) |
+| `empresa_id` | `UUID` | `NOT NULL`, FK para `empresa` (`fk_cliente_empresa`) |
 | `tipo_pessoa` | `VARCHAR(10)` | `NOT NULL` (`FISICA`, `JURIDICA`) |
-| `nome` | `VARCHAR(150)` | `NOT NULL`, *collation* `utf8mb4_0900_ai_ci` |
+| `nome` | `VARCHAR(150)` | `NOT NULL`, *collation* `ci_ai` (RNF-BE-26) |
 | `documento` | `VARCHAR(14)` | `NOT NULL` |
 | `email` | `VARCHAR(160)` | `NULL` |
 | `telefone` | `VARCHAR(11)` | `NULL` |
@@ -200,13 +200,13 @@ RNF-096, RNF-097, RNF-054, RNF-024, RNF-025, RNF-BE-02, RNF-BE-15, RNF-BE-16, RN
 Implementados na fase de testes (RNF-016). Até lá, os critérios de aceite são verificados manualmente na Swagger UI.
 
 - **Unitários:** validação por `tipoPessoa`, normalização de documento, RN-05 e RN-06 com `VerificadorVinculoCliente` **simulado** (cobre o cenário de histórico enquanto não há vendas).
-- **Web (`MockMvc`):** matriz de perfis, formato dos erros e códigos de status.
-- **Integração (Testcontainers):** unicidade por empresa, busca sem distinção de acento/caixa e paginação.
+- **Web (`TestClient` do FastAPI):** matriz de perfis, formato dos erros e códigos de status.
+- **Integração (Testcontainers com PostgreSQL):** unicidade por empresa, busca sem distinção de acento/caixa e paginação.
 - **Arquitetura:** a feature `cliente` não depende de outras features, exceto da `EmpresaAtiva` pública.
 
 ## Pontos de atenção ao revisar código gerado por IA
 
-- Entidade JPA devolvida pela API; `empresa_id` recebido do cliente; consulta sem filtro por `empresa_id` (vazamento entre empresas).
+- Entidade de domínio ou modelo SQLAlchemy devolvido pela API; `empresa_id` recebido do cliente; consulta sem filtro por `empresa_id` (vazamento entre empresas).
 - Unicidade verificada só com "consultar e depois inserir" (corrida) sem a restrição no banco; `DataIntegrityViolationException` chegando ao cliente como `500`.
 - Busca com `LIKE` montado por concatenação de texto (injeção de SQL) ou sem normalizar a máscara do documento.
 - `DELETE` apagando sem consultar os vínculos, ou apagando em cascata; ou o bloqueio implementado com uma consulta direta às tabelas de vendas, acoplando as *features* (RNF-BE-05) e, no caso de OS, quebrando o banco por serviço (RNF-090).

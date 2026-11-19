@@ -9,6 +9,14 @@ Thumbs.db
 *.log
 
 # Artefatos de build (cada serviço também tem seu próprio .gitignore)
-target/
 node_modules/
 dist/
+
+# Python (serviços de backend)
+.venv/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/

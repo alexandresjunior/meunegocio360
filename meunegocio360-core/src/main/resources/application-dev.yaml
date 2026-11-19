@@ -7,4 +7,6 @@ app:
   seed:
     # Seed somente no perfil dev (RNF-BE-24); senhas vindas do ambiente, nunca do repositório.
     admin-senha: ${SEED_ADMIN_SENHA:}
+    # SEED_USUARIO_SENHA é a senha do usuário OPERADOR_COMERCIAL (RF-BE-002).
     usuario-senha: ${SEED_USUARIO_SENHA:}
+    financeiro-senha: ${SEED_FINANCEIRO_SENHA:}

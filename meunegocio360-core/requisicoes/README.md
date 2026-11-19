@@ -8,12 +8,15 @@ Arquivos `.http` para verificar manualmente os critérios de aceite dos requisit
 | `02-erros-e-seguranca.http` | Credenciais inválidas, e-mail inexistente, validação, tokens inválidos, *deny-by-default*, `Origin` não permitida. |
 | `03-reuso-de-refresh-token.http` | Detecção de reuso e revogação da família. |
 | `04-bloqueio-por-tentativas.http` | Bloqueio após 5 falhas, `429` com `Retry-After` e desbloqueio. |
+| `05-empresa-admin.http` | RF-BE-002 como `ADMIN`: primeiro cadastro, CNPJ inválido, edição com `versao`, conflito de versão, inativação e reativação. |
+| `06-empresa-operador-comercial.http` | RF-BE-002 como `OPERADOR_COMERCIAL`: consulta permitida; cadastro, edição e situação negados (`403`). |
+| `07-empresa-operador-financeiro.http` | RF-BE-002 como `OPERADOR_FINANCEIRO`: consulta permitida; escrita negada (`403`). |
 
 ## Preparação
 
 1. No `.env` da raiz:
    - `JWT_SECRET` com pelo menos 32 bytes (`openssl rand -base64 48`). Sem isso a aplicação não sobe;
-   - `SEED_ADMIN_SENHA` e `SEED_USUARIO_SENHA` com 8 a 72 caracteres. São as senhas de `admin@meunegocio360.com.br` e `usuario@meunegocio360.com.br`, criados apenas no perfil `dev`;
+   - `SEED_ADMIN_SENHA`, `SEED_USUARIO_SENHA` e `SEED_FINANCEIRO_SENHA` com 8 a 72 caracteres. São as senhas de `admin@meunegocio360.com.br` (`ADMIN`), `usuario@meunegocio360.com.br` (`OPERADOR_COMERCIAL`) e `financeiro@meunegocio360.com.br` (`OPERADOR_FINANCEIRO`), criados apenas no perfil `dev`;
    - `APP_AUTH_COOKIE_SECURE=false`. O REST Client não reenvia cookies `Secure` em `http://`, e o requisito permite esse valor somente no perfil `dev`;
    - opcional: `APP_AUTH_BLOQUEIO_MINUTOS=1`, para testar o desbloqueio sem esperar 15 minutos.
 2. `docker compose up -d` na raiz e `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev` em `meunegocio360-core`.

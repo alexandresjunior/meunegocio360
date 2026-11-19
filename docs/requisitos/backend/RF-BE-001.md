@@ -1,114 +1,35 @@
-# MeuNegocio360 — Requisitos do Backend
+# RF-BE-001 — Autenticação de usuário (login)
 
-| | |
-| --- | --- |
-| **Versão** | 2.1 |
-| **Atualizado em** | 11/11/2026 |
-| **Projeto** | `meunegocio360-*` (módulo por serviço) |
-| **Herda de** | [`requisitos-gerais.md`](./requisitos-gerais.md) (todos os RNF se aplicam; aqui só há o que é específico do backend) |
-
-## 1. Arquitetura
-
-As regras de arquitetura entre serviços (banco por serviço, contratos, tokens) estão em [`requisitos-gerais.md`](./requisitos-gerais.md#32-microsserviços). A estrutura de pacotes está no [`README.md`](../README.md#backend-cada-serviço). Dentro de cada serviço:
-
-| ID | Requisito |
-| --- | --- |
-| RNF-BE-01 | Controllers DEVEM ser finos: recebem DTO, delegam ao caso de uso e devolvem DTO. Regra de negócio NÃO DEVE ficar em controller nem em repositório. |
-| RNF-BE-02 | Entidades JPA NUNCA DEVEM ser expostas na API. Entrada e saída usam DTOs (preferencialmente `record`). |
-| RNF-BE-03 | Injeção de dependências DEVE ser por **construtor**; sem `@Autowired` em campos. |
-| RNF-BE-04 | Fronteiras transacionais (`@Transactional`) ficam na camada `application`. |
-| RNF-BE-05 | Uma feature NÃO DEVE acessar diretamente o repositório ou as entidades internas de outra feature. A comunicação é por interface pública do caso de uso. |
-
-## 2. Convenções da API REST
-
-| ID | Requisito |
-| --- | --- |
-| RNF-BE-10 | Prefixo `/api/v1`. Recursos no plural e em *kebab-case* (`/api/v1/ordens-de-servico`). Verbos HTTP com semântica correta: `GET` (leitura), `POST` (criação/ação), `PUT`/`PATCH` (atualização), `DELETE` (remoção). |
-| RNF-BE-11 | JSON em `camelCase` (datas e valores conforme RNF-033). Identificadores públicos são **UUID**, nunca sequenciais. |
-| RNF-BE-12 | Códigos de status: `200` leitura/ação, `201` criação (com `Location`), `204` sem conteúdo, `400` requisição inválida, `401` não autenticado, `403` sem permissão, `404` não encontrado, `409` conflito, `422` regra de negócio violada, `429` limite excedido, `500` erro inesperado. |
-| RNF-BE-13 | Paginação com parâmetros `page` (a partir de 0), `size` (padrão 20, máximo 100) e `sort`. Resposta: `{ "content": [...], "page": 0, "size": 20, "totalElements": 0, "totalPages": 0 }`. |
-| RNF-BE-14 | Todos os erros usam `application/problem+json` (RFC 9457) com o formato abaixo, tratados por um único `@RestControllerAdvice`. |
-
-Formato padrão de erro:
-
-```json
-{
-  "type": "https://meunegocio360.com.br/problemas/validacao",
-  "title": "Dados inválidos",
-  "status": 400,
-  "detail": "Um ou mais campos são inválidos.",
-  "instance": "/api/v1/auth/login",
-  "code": "VALIDATION_ERROR",
-  "traceId": "9f1c2e7a-...",
-  "errors": [
-    { "field": "email", "message": "deve ser um e-mail válido" }
-  ]
-}
-```
-
-O campo `code` é um identificador estável, em `UPPER_SNAKE_CASE`, usado pelo frontend para decidir o comportamento. O texto de `detail` e `message` NÃO DEVE ser usado como lógica pelo cliente.
-
-## 3. Persistência
-
-| ID | Requisito |
-| --- | --- |
-| RNF-BE-20 | Schema evoluído exclusivamente por migrations Flyway em `src/main/resources/db/migration`, nomeadas `V<n>__<descricao>.sql`. Migrations aplicadas NUNCA são editadas. |
-| RNF-BE-21 | `spring.jpa.hibernate.ddl-auto` DEVE ser `validate` (ou `none`) em todos os perfis. |
-| RNF-BE-22 | Tabelas em `snake_case` e no singular ou plural de forma consistente (padrão do projeto: **singular**, ex.: `usuario`). Toda tabela tem `id` (UUID), `criado_em`, `atualizado_em` (UTC) e `versao` (controle otimista com `@Version`). |
-| RNF-BE-23 | Restrições de integridade (`NOT NULL`, `UNIQUE`, chaves estrangeiras, índices em colunas de busca) DEVEM existir no banco, e não apenas na aplicação. |
-| RNF-BE-24 | Dados de seed apenas para o perfil `dev`, por migration ou *runner* dedicado. Nunca em `prod`. |
-| RNF-BE-25 | Na fase de testes, testes de repositório e de integração DEVEM usar MySQL real via Testcontainers, e não um banco em memória com dialeto diferente. |
-
-## 4. Configuração e ambientes
-
-| ID | Requisito |
-| --- | --- |
-| RNF-BE-31 | Em desenvolvimento, o `application-dev.yaml` DEVE importar o `.env` da raiz com `spring.config.import: optional:file:../.env[.properties]`; nos demais ambientes as variáveis vêm do ambiente (RNF-052). As variáveis são as documentadas em `.env.example`. A aplicação DEVE usar `server.port: ${PORT:8080}` (RNF-101). |
-| RNF-BE-32 | A aplicação DEVE falhar na inicialização (*fail fast*) se uma variável obrigatória estiver ausente ou inválida (por exemplo, `JWT_SECRET` com menos de 32 bytes). |
-
-## 5. Segurança, observabilidade e qualidade
-
-| ID | Requisito |
-| --- | --- |
-| RNF-BE-40 | `SecurityFilterChain` explícito: sessão `STATELESS` e *deny-by-default* (`anyRequest().authenticated()`, RNF-021), com exceções listadas e documentadas. O CSRF do Spring PODE ficar desabilitado porque a autenticação das APIs é por cabeçalho `Authorization`; os dois únicos endpoints que usam cookie (`/auth/refresh` e `/auth/logout`) DEVEM ser protegidos por `SameSite=Strict`, cookie restrito ao seu caminho e verificação do cabeçalho `Origin` contra a lista de origens permitidas. |
-| RNF-BE-41 | Cabeçalhos de segurança padrão do Spring Security mantidos (`X-Content-Type-Options`, `Cache-Control` em respostas autenticadas, HSTS em produção). |
-| RNF-BE-42 | CORS configurado por *bean* único, lendo as origens permitidas de `CORS_ALLOWED_ORIGINS` (a mesma lista usada na verificação de `Origin`), com `allowCredentials = true` e, portanto, **sem** curinga `*`, jamais em produção. O frontend usa a mesma origem (RNF-103); o CORS atende a chamadas diretas de outras origens. |
-| RNF-BE-43 | Um filtro DEVE ler ou gerar `X-Request-Id`, colocá-lo no MDC dos logs e devolvê-lo na resposta e no campo `traceId` dos erros (RNF-050). |
-| RNF-BE-44 | Logs estruturados via suporte nativo do Spring Boot nos perfis `test` e `prod`. Eventos de segurança (login com sucesso, falha, bloqueio) DEVEM ser registrados **sem** senha, token ou e-mail completo (RNF-023, RNF-025). |
-| RNF-BE-45 | `./mvnw verify` DEVE passar antes de cada PR. Ele executa a verificação de formatação (Spotless) e, a partir da fase de testes, os testes, as regras de arquitetura e a cobertura (JaCoCo). |
-| RNF-BE-46 | Na fase de testes: JUnit 5, Mockito e AssertJ; `@WebMvcTest`/`MockMvc` para a camada web; `@DataJpaTest` ou `@SpringBootTest` com Testcontainers para persistência e integração; Spring Security Test para cenários autenticados. |
-
----
-
-## RF-BE-001 — Autenticação de usuário (login)
-
+> **Branch:** `feat/rf-be-001-login`  
 > **Serviço:** Núcleo (`meunegocio360-core`), emissor de identidade (RNF-094).  
-> **Consumido por:** `RF-FE-001` e por todos os requisitos seguintes (que passam a exigir autenticação).
+> **Consumido por:** [RF-FE-001](../frontend/RF-FE-001.md) e por todos os requisitos seguintes (que passam a exigir autenticação).  
+> **Evolução:** os perfis `ADMIN` e `USUARIO` definidos aqui são substituídos em [RF-BE-002](./RF-BE-002.md) por `ADMIN`, `OPERADOR_COMERCIAL` e `OPERADOR_FINANCEIRO`.
 
-### História de usuário
+## História de usuário
 
 Como **usuário cadastrado do sistema**, quero **entrar com meu e-mail e minha senha e continuar autenticado sem precisar entrar de novo a cada recarregamento da página**, para **acessar as funcionalidades protegidas do MeuNegocio360 de forma segura e prática**.
 
-### Escopo
+## Escopo
 
 **Dentro do escopo (obrigatório):** entidade e tabela de usuário e de refresh token, *seed* de desenvolvimento, `POST /api/v1/auth/login`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me`, emissão e validação de JWT de acesso, refresh token rotativo com detecção de reuso, proteção *deny-by-default* dos demais endpoints, bloqueio temporário por tentativas falhas, tratamento padronizado de erros e testes.
 
 **Fora do escopo deste requisito:** cadastro/edição de usuários (CRUD), recuperação e troca de senha, MFA, login social, autorização granular por perfil (somente o papel é gravado no token), limitação de requisições por IP, validação dos tokens por outros serviços (RS256/JWKS).
 
-### Dependências introduzidas
+## Dependências introduzidas
 
-O `pom.xml` gerado já contém a **base**: web MVC, Spring Data JPA, Spring Security, validação, springdoc, DevTools, driver MySQL e os *starters* de teste. Este requisito introduz (RNF-015):
+O esqueleto do serviço já contém a **base**: FastAPI, Uvicorn, Pydantic e pydantic-settings. Este requisito introduz (RNF-015):
 
 | Dependência | Para quê |
 | --- | --- |
-| Flyway (`flyway-core` + `flyway-mysql`) | Migrations de banco (RNF-BE-20) |
-| `spring-boot-starter-oauth2-resource-server` | Validação de JWT (Nimbus) no `SecurityFilterChain` e emissão com `JwtEncoder` |
-| Spring Boot Actuator | *Health check* (RNF-051, RNF-104) |
-| Spotless | Formatação (RNF-082) |
+| SQLAlchemy 2.x + `psycopg` | Persistência no PostgreSQL |
+| Alembic | Migrations de banco (RNF-BE-20) |
+| PyJWT | Emissão e validação do JWT (HS256) |
+| bcrypt | Hash de senha (RN-11) |
+| Ruff (grupo `dev`) | Formatação e lint (RNF-082) |
 
-Dependências de teste (Testcontainers, JaCoCo, ArchUnit) entram na fase de testes.
+O *health check* (RNF-051, RNF-104) é uma rota própria, sem biblioteca. Dependências de teste (pytest, Testcontainers, pytest-cov) entram na fase de testes.
 
-### Regras de negócio
+## Regras de negócio
 
 | ID | Regra |
 | --- | --- |
@@ -126,11 +47,11 @@ Dependências de teste (Testcontainers, JaCoCo, ArchUnit) entram na fase de test
 | RN-12 | O último login bem-sucedido (`ultimo_login_em`) é registrado. A renovação por refresh NÃO altera esse campo. |
 | RN-13 | Desativar um usuário ou bloquear sua conta revoga as suas famílias de refresh token ativas e impede novas renovações. |
 
-### Contrato da API
+## Contrato da API
 
 Todos os caminhos abaixo são relativos a `/api/v1`.
 
-#### `POST /auth/login` (público)
+### `POST /auth/login` (público)
 
 Requisição:
 
@@ -154,19 +75,19 @@ Resposta `200 OK`, com o cookie de refresh em `Set-Cookie`:
 }
 ```
 
-#### `POST /auth/refresh` (público, exige o cookie de refresh)
+### `POST /auth/refresh` (público, exige o cookie de refresh)
 
 Sem corpo. O navegador envia o cookie automaticamente. Resposta `200 OK`: **mesmo formato da resposta do login** (inclui `usuario`, o que dispensa uma chamada a `/me` ao restaurar a sessão) e um **novo** cookie de refresh em `Set-Cookie`.
 
-#### `POST /auth/logout` (público, usa o cookie de refresh)
+### `POST /auth/logout` (público, usa o cookie de refresh)
 
 Sem corpo. Resposta `204 No Content`, com `Set-Cookie` que expira o cookie imediatamente.
 
-#### `GET /auth/me` (autenticado)
+### `GET /auth/me` (autenticado)
 
 Cabeçalho: `Authorization: Bearer <accessToken>`. Resposta `200 OK`: o objeto `usuario` acima.
 
-#### Cookie de refresh
+### Cookie de refresh
 
 | Atributo | Valor |
 | --- | --- |
@@ -179,7 +100,7 @@ Cabeçalho: `Authorization: Bearer <accessToken>`. Resposta `200 OK`: o objeto `
 
 Os endpoints `/auth/refresh` e `/auth/logout` DEVEM rejeitar com `403` (`code: "ORIGIN_NOT_ALLOWED"`) requisições cujo cabeçalho `Origin` esteja presente e fora da lista de `CORS_ALLOWED_ORIGINS` (RNF-BE-40).
 
-#### Erros (todos em `application/problem+json`)
+### Erros (todos em `application/problem+json`)
 
 | Status | `code` | Endpoint | Quando |
 | --- | --- | --- | --- |
@@ -191,7 +112,7 @@ Os endpoints `/auth/refresh` e `/auth/logout` DEVEM rejeitar com `403` (`code: "
 | 429 | `ACCOUNT_TEMPORARILY_LOCKED` | login | Bloqueio por tentativas excedidas; inclui `Retry-After` em segundos. |
 | 500 | `INTERNAL_ERROR` | todos | Erro inesperado, sem detalhes internos. |
 
-### Token de acesso (JWT)
+## Token de acesso (JWT)
 
 | Item | Definição |
 | --- | --- |
@@ -200,41 +121,41 @@ Os endpoints `/auth/refresh` e `/auth/logout` DEVEM rejeitar com `403` (`code: "
 | Validação | Assinatura, algoritmo esperado, `iss` e `exp`. Token com `alg: none` ou outro algoritmo DEVE ser rejeitado. |
 | Conteúdo | NÃO DEVE conter senha, *hash*, nem dados pessoais além do necessário. |
 
-### Modelo de dados
+## Modelo de dados
 
-Migration `V1__criar_tabela_usuario.sql` (nomes ilustrativos):
+Migration `0001_criar_tabela_usuario.py` (nomes ilustrativos):
 
 | Coluna | Tipo | Restrições |
 | --- | --- | --- |
-| `id` | `BINARY(16)` (UUID) | PK |
+| `id` | `UUID` | PK |
 | `nome` | `VARCHAR(120)` | `NOT NULL` |
 | `email` | `VARCHAR(160)` | `NOT NULL`, `UNIQUE` |
 | `senha_hash` | `VARCHAR(100)` | `NOT NULL` (BCrypt, formato `{bcrypt}...`) |
 | `perfil` | `VARCHAR(20)` | `NOT NULL` (`ADMIN`, `USUARIO`) |
 | `ativo` | `BOOLEAN` | `NOT NULL`, padrão `TRUE` |
 | `tentativas_falhas` | `INT` | `NOT NULL`, padrão `0` |
-| `bloqueado_ate` | `DATETIME(6)` | nulo (UTC) |
-| `ultimo_login_em` | `DATETIME(6)` | nulo (UTC) |
-| `criado_em`, `atualizado_em` | `DATETIME(6)` | `NOT NULL` (UTC) |
+| `bloqueado_ate` | `TIMESTAMPTZ` | nulo (UTC) |
+| `ultimo_login_em` | `TIMESTAMPTZ` | nulo (UTC) |
+| `criado_em`, `atualizado_em` | `TIMESTAMPTZ` | `NOT NULL` (UTC) |
 | `versao` | `BIGINT` | `NOT NULL` (controle otimista) |
 
-Migration `V2__criar_tabela_refresh_token.sql`:
+Migration `0002_criar_tabela_refresh_token.py`:
 
 | Coluna | Tipo | Restrições |
 | --- | --- | --- |
-| `id` | `BINARY(16)` (UUID) | PK |
-| `usuario_id` | `BINARY(16)` | `NOT NULL`, FK para `usuario`, indexada |
-| `familia_id` | `BINARY(16)` | `NOT NULL`, indexada (agrupa a cadeia de rotações de uma sessão) |
+| `id` | `UUID` | PK |
+| `usuario_id` | `UUID` | `NOT NULL`, FK para `usuario`, indexada |
+| `familia_id` | `UUID` | `NOT NULL`, indexada (agrupa a cadeia de rotações de uma sessão) |
 | `token_hash` | `CHAR(64)` | `NOT NULL`, `UNIQUE` (SHA-256 em hexadecimal) |
-| `expira_em` | `DATETIME(6)` | `NOT NULL` (UTC) |
-| `revogado_em` | `DATETIME(6)` | nulo (UTC); preenchido na rotação, no logout ou na revogação da família |
-| `criado_em` | `DATETIME(6)` | `NOT NULL` (UTC) |
+| `expira_em` | `TIMESTAMPTZ` | `NOT NULL` (UTC) |
+| `revogado_em` | `TIMESTAMPTZ` | nulo (UTC); preenchido na rotação, no logout ou na revogação da família |
+| `criado_em` | `TIMESTAMPTZ` | `NOT NULL` (UTC) |
 
-Tokens expirados ou revogados há mais de 30 dias DEVEM ser removidos por uma rotina agendada (`@Scheduled`). Não registrar IP nem *user-agent* (minimização de dados, RNF-025).
+Tokens expirados ou revogados há mais de 30 dias DEVEM ser removidos por uma rotina agendada (tarefa periódica iniciada com a aplicação e o comando `meunegocio360-limpar-tokens`, para agendamento externo). Não registrar IP nem *user-agent* (minimização de dados, RNF-025).
 
 **Seed de desenvolvimento (somente perfil `dev`):** um usuário `ADMIN` e um `USUARIO`, com e-mails fictícios e senhas lidas de variáveis de ambiente (`SEED_ADMIN_SENHA`, `SEED_USUARIO_SENHA`). Senhas de seed NÃO DEVEM ser gravadas em texto no repositório, nem existir em `prod`.
 
-### Critérios de aceite
+## Critérios de aceite
 
 ```gherkin
 Cenário: Login com credenciais válidas
@@ -316,40 +237,40 @@ Cenário: Endpoints desconhecidos ou não liberados
   Então recebe 401 (deny-by-default)
 ```
 
-### Requisitos não funcionais com destaque neste requisito
+## Requisitos não funcionais com destaque neste requisito
 
 RNF-021, RNF-022, RNF-023, RNF-024, RNF-025, RNF-050, RNF-094, RNF-BE-14, RNF-BE-40, RNF-BE-42, RNF-BE-43 e RNF-BE-44.
 
-### Testes previstos
+## Testes previstos
 
 Implementados na fase de testes (RNF-016). Até lá, os critérios de aceite são verificados manualmente.
 
-- **Unitários** (sem Spring): casos de uso de login, refresh e logout (sucesso, senha errada, usuário inexistente, inativo, bloqueio e desbloqueio por tempo, rotação, expiração, reuso e revogação de família), usando um `Clock` injetável; emissão e validação do JWT (expirado, adulterado, `alg` errado).
-- **Web** (`MockMvc`): contrato de todos os endpoints, atributos do cookie, formato `problem+json`, cabeçalhos `Retry-After` e `WWW-Authenticate`, verificação de `Origin`.
-- **Integração** (Testcontainers MySQL + Flyway): migrations aplicam-se do zero, unicidade de e-mail e de `token_hash`, fluxo completo login → `me` → refresh → logout, reuso de token.
+- **Unitários** (sem FastAPI nem banco): casos de uso de login, refresh e logout (sucesso, senha errada, usuário inexistente, inativo, bloqueio e desbloqueio por tempo, rotação, expiração, reuso e revogação de família), usando um relógio injetável (`Relogio`); emissão e validação do JWT (expirado, adulterado, `alg` errado).
+- **Web** (`TestClient` do FastAPI): contrato de todos os endpoints, atributos do cookie, formato `problem+json`, cabeçalhos `Retry-After` e `WWW-Authenticate`, verificação de `Origin`.
+- **Integração** (Testcontainers com PostgreSQL + Alembic): migrations aplicam-se do zero, unicidade de e-mail e de `token_hash`, fluxo completo login → `me` → refresh → logout, reuso de token.
 - **Segurança:** mesma resposta (corpo e status) para e-mail inexistente e senha incorreta; endpoint arbitrário sem token retorna 401; o valor do refresh token nunca é gravado em claro no banco nem aparece em logs.
 - **Concorrência:** duas renovações simultâneas com o mesmo refresh token não podem produzir dois tokens válidos (apenas uma vence; a outra recebe 401).
-- **Arquitetura:** regra de camadas (ArchUnit) para a feature `auth`.
+- **Arquitetura:** regra de camadas verificada por teste (por exemplo, com import-linter) para a feature `auth`.
 
-### Pontos de atenção ao revisar código gerado por IA
+## Pontos de atenção ao revisar código gerado por IA
 
 Assistentes de IA costumam errar justamente aqui. Verifique, um a um:
 
 - Mensagens ou status diferentes para "e-mail não existe" e "senha errada" (enumeração de usuários).
-- Segredo JWT *hardcoded*, fraco ou com valor padrão no `application.yaml`.
+- Segredo JWT *hardcoded*, fraco ou com valor padrão no código ou no `.env.example`.
 - Refresh token devolvido no corpo da resposta, gravado em claro no banco, ou cookie sem `HttpOnly`/`SameSite`/`Path` restrito.
 - Refresh token **sem rotação** ou sem detecção de reuso; rotação sem transação ou sem bloqueio de concorrência (dois usos simultâneos gerando dois tokens válidos).
 - Cookie válido por mais tempo que o registro no banco, ou logout que apenas apaga o cookie sem revogar no servidor.
 - `allowedOrigins("*")` junto com credenciais, ou verificação de `Origin` ausente em `/auth/refresh`.
 - Senhas, tokens ou e-mails completos em logs; `toString()` de entidade ou DTO exibindo `senhaHash`/`tokenHash`.
 - Comparação de senha feita manualmente, em vez de usar `PasswordEncoder`; uso de MD5/SHA sem *salt* para senha (SHA-256 só é adequado para o refresh token, que já é aleatório e de alta entropia).
-- Entidade JPA devolvida diretamente na resposta; DTO com campos de hash.
-- `permitAll()` amplos demais (por exemplo, `/**`), ou rotas do Swagger/Actuator abertas em produção.
-- Validação do JWT sem checar algoritmo, emissor e expiração; uso de API ou biblioteca desatualizada ou inexistente na versão do Spring Boot em uso.
-- Contador de tentativas com condição de corrida, ou uso espalhado de `LocalDateTime.now()`/`Instant.now()`, o que torna os testes frágeis.
+- Entidade de domínio ou modelo SQLAlchemy devolvido diretamente na resposta; DTO com campos de hash.
+- Rotas públicas amplas demais (por exemplo, liberar um prefixo inteiro), ou rotas do Swagger/Actuator abertas em produção.
+- Validação do JWT sem checar algoritmo, emissor e expiração; uso de API ou biblioteca desatualizada ou inexistente na versão de PyJWT/FastAPI em uso.
+- Contador de tentativas com condição de corrida, ou uso espalhado de `datetime.now()`, o que torna os testes frágeis.
 - Testes que apenas verificam `status == 200`, sem validar o conteúdo do token, o cookie e os efeitos no banco.
 
-### Extensões opcionais (desafios)
+## Extensões opcionais (desafios)
 
 1. Tolerância curta (por exemplo, 10 s) para renovações simultâneas legítimas feitas por abas diferentes, sem abrir mão da detecção de reuso.
 2. Listagem e revogação de sessões ativas do usuário.

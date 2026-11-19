@@ -2,44 +2,56 @@
 
 | | |
 | --- | --- |
-| **Versão** | 2.1 |
-| **Atualizado em** | 11/11/2026 |
+| **Versão** | 3.0 |
+| **Atualizado em** | 18/11/2026 |
 | **Aplica-se a** | Todos os serviços de backend (`meunegocio360-*`) e ao frontend (`meunegocio360-js`) |
-| **Documentos relacionados** | [`requisitos-be.md`](./requisitos-be.md) · [`requisitos-fe.md`](./requisitos-fe.md) |
-
+| **Requisitos por camada** | [`backend/`](./backend) · [`frontend/`](./frontend) |
 ## 1. Como ler este documento
 
-Este documento reúne os **requisitos não funcionais (RNF) válidos para todo o projeto** e o **índice dos requisitos funcionais (RF)**. Os documentos de backend e frontend herdam tudo o que está aqui e acrescentam apenas o que é específico de cada camada.
+Este documento reúne os **requisitos não funcionais (RNF) válidos para todo o projeto** e o **índice dos requisitos funcionais (RF)**. Os requisitos de cada camada ficam em [`backend/`](./backend) e [`frontend/`](./frontend): cada pasta tem um arquivo de requisitos não funcionais da camada ([`RNF-BE.md`](./backend/RNF-BE.md), [`RNF-FE.md`](./frontend/RNF-FE.md)) e **um arquivo por requisito funcional** (`RF-BE-NNN.md`, `RF-FE-NNN.md`). Todos herdam o que está aqui e acrescentam apenas o que é específico da camada.
 
-Visão do produto, arquitetura, stack, estrutura do repositório, comandos, fluxo de contribuição e implantação estão no [`README.md`](../README.md) e não são repetidos aqui.
+Visão do produto, arquitetura, stack, estrutura do repositório, comandos, fluxo de contribuição e implantação estão no [`README.md`](../../README.md) e não são repetidos aqui.
 
 Convenções de leitura:
 
 - As palavras **DEVE**, **NÃO DEVE**, **DEVERIA** e **PODE** seguem o sentido da RFC 2119: *DEVE* é obrigatório, *DEVERIA* é fortemente recomendado (desvios exigem justificativa no *Pull Request* - PR) e *PODE* é opcional.
 - Cada requisito tem um identificador estável e rastreável: `RNF-xxx` (não funcionais, válidos em todo o projeto), `RNF-BE-xx` e `RNF-FE-xx` (não funcionais de cada camada), `RF-BE-xxx` (funcional de backend) e `RF-FE-xxx` (funcional de frontend). Commits, PRs e documentação **DEVEM** citar o ID do requisito atendido.
-- Os arquivos `pom.xml` e `package.json` são a fonte da verdade para versões de bibliotecas.
+- Os arquivos `pyproject.toml`/`uv.lock` e `package.json` são a fonte da verdade para versões de bibliotecas.
+- **Stack deste fork:** os requisitos vêm do repositório de origem (Java/Spring/MySQL) e foram adaptados para Python 3.13, FastAPI, SQLAlchemy 2.x, Alembic, PostgreSQL 18 e uv. As regras de negócio, contratos e critérios de aceite são os mesmos; só mudam os nomes das ferramentas.
 
 ## 2. Requisitos funcionais
 
-| ID | Camada | Título | Documento |
-| --- | --- | --- | --- |
-| RF-BE-001 | Backend (Núcleo) | Autenticação de usuário (login) e sessão com refresh token | [`requisitos-be.md`](./requisitos-be.md#rf-be-001--autenticação-de-usuário-login) |
-| RF-FE-001 | Frontend | Fluxo de login do usuário, com persistência de sessão | [`requisitos-fe.md`](./requisitos-fe.md#rf-fe-001--fluxo-de-login-do-usuário) |
+| Funcionalidade | ID | Camada | Título | Arquivo |
+| --- | --- | --- | --- | --- |
+| F01 | RF-BE-001 | Backend (Núcleo) | Autenticação de usuário (login) e sessão com refresh token | [`RF-BE-001.md`](./backend/RF-BE-001.md) |
+| F01 | RF-FE-001 | Frontend | Fluxo de login do usuário, com persistência de sessão | [`RF-FE-001.md`](./frontend/RF-FE-001.md) |
+| F02 | RF-BE-002 | Backend (Núcleo) | Cadastro de empresa, parâmetros básicos e perfis de acesso | [`RF-BE-002.md`](./backend/RF-BE-002.md) |
+| F02 | RF-FE-002 | Frontend | Cadastro de empresa, layout da aplicação e guardas de acesso | [`RF-FE-002.md`](./frontend/RF-FE-002.md) |
+| F03 | RF-BE-003 | Backend (Núcleo) | Cadastro de clientes | [`RF-BE-003.md`](./backend/RF-BE-003.md) |
+| F03 | RF-FE-003 | Frontend | Cadastro e busca de clientes | [`RF-FE-003.md`](./frontend/RF-FE-003.md) |
+| F04 | RF-BE-004 | Backend (Núcleo) | Cadastro de fornecedores | [`RF-BE-004.md`](./backend/RF-BE-004.md) |
+| F04 | RF-FE-004 | Frontend | Cadastro e busca de fornecedores | [`RF-FE-004.md`](./frontend/RF-FE-004.md) |
+| F05 | RF-BE-005 | Backend (Núcleo) | Catálogo de produtos e serviços | [`RF-BE-005.md`](./backend/RF-BE-005.md) |
+| F05 | RF-FE-005 | Frontend | Catálogo de produtos e serviços | [`RF-FE-005.md`](./frontend/RF-FE-005.md) |
 
-Novos requisitos DEVEM ser acrescentados a esta tabela e ao documento de sua camada.
+Novos requisitos DEVEM ser acrescentados a esta tabela e criados como um arquivo na pasta de sua camada.
 
 ### 2.1 Escopo de um requisito funcional
 
-Cada RF é entregue de ponta a ponta (especificação, implementação, verificação dos critérios de aceite) e DEVE explicitar o que está **dentro** e **fora** de seu escopo, as dependências que introduz (RNF-015) e as regras de negócio aplicáveis.
+Cada RF é entregue de ponta a ponta (especificação, implementação, verificação dos critérios de aceite) e DEVE explicitar o que está **dentro** e **fora** de seu escopo, as dependências que introduz (RNF-015) e as regras de negócio aplicáveis. Cada RF é desenvolvido em **uma branch própria** (seção 2.3).
 
 ### 2.2 Template de requisito
 
 Todo novo requisito DEVE usar esta estrutura, para que a IA e as pessoas recebam a mesma informação:
 
 ```markdown
-## RF-<BE|FE>-NNN — <Título curto>
+# RF-<BE|FE>-NNN — <Título curto>
+
+**Branch:** `feat/rf-<be|fe>-NNN-<resumo>`
 
 **História de usuário:** Como <perfil>, quero <ação>, para <benefício>.
+
+**Atores e precondições:** <perfis autorizados e o que já deve existir>
 
 **Contexto e dependências:** <o que já existe; requisitos dos quais depende>
 
@@ -67,6 +79,10 @@ Cenário: …
 
 **Extensões opcionais:** <desafios que NÃO fazem parte do requisito>
 ```
+
+### 2.3 Branch por requisito
+
+Cada RF é desenvolvido em uma branch própria, criada a partir da `main` atualizada do fork e nomeada `<tipo>/<id-do-requisito>-<resumo>` em minúsculas, conforme as [convenções do README](../../README.md#63-convenções). A branch do requisito é registrada no campo **Branch** de cada arquivo (ex.: `feat/rf-be-003-clientes`) e um PR NÃO DEVE misturar mais de um RF.
 
 ## 3. Requisitos não funcionais (válidos para todo o projeto)
 
@@ -97,7 +113,7 @@ Os requisitos desta seção são **aplicados progressivamente**: valem desde o i
 
 | ID | Requisito |
 | --- | --- |
-| RNF-015 | Bibliotecas e ferramentas são acrescentadas ao `pom.xml` e ao `package.json` **no requisito que as exige**, e não antecipadamente. O projeto parte da base mínima gerada (Spring Initializr e Vite). Cada requisito lista, em "Dependências introduzidas", o que traz consigo. |
+| RNF-015 | Bibliotecas e ferramentas são acrescentadas ao `pyproject.toml` (via `uv add`) e ao `package.json` **no requisito que as exige**, e não antecipadamente. O projeto parte de uma base mínima (esqueleto FastAPI e projeto gerado pelo Vite). Cada requisito lista, em "Dependências introduzidas", o que traz consigo. |
 | RNF-016 | Requisitos não funcionais que dependem de uma ferramenta ainda não introduzida (por exemplo, testes automatizados, cobertura ou verificação automática de acessibilidade) passam a ser exigíveis **a partir do requisito ou da fase que introduz a ferramenta**. Os demais valem desde o início. |
 
 ### 3.4 Segurança e privacidade
@@ -119,15 +135,15 @@ Referência: **OWASP ASVS nível 1** e **OWASP Top 10**.
 
 | ID | Requisito | Como verificar |
 | --- | --- | --- |
-| RNF-030 | Toda API DEVE ser documentada em OpenAPI (springdoc), com exemplos de sucesso e de erro, e disponível em `/swagger-ui.html` fora de produção. | Revisão; abertura da UI. |
+| RNF-030 | Toda API DEVE ser documentada em OpenAPI (gerado pelo FastAPI a partir das rotas e dos modelos Pydantic), com exemplos de sucesso e de erro, e disponível em `/swagger-ui.html` fora de produção. | Revisão; abertura da UI. |
 | RNF-032 | Mudanças incompatíveis no contrato DEVEM gerar nova versão de caminho (`/api/v2`). Mudanças compatíveis (campos opcionais novos) não. | Revisão. |
 | RNF-033 | Datas e horas trafegam em **ISO 8601 UTC** (ex.: `2026-11-11T14:30:00Z`); valores monetários como inteiros em centavos ou decimais em *string*, nunca `float`. | Revisão; testes de serialização. |
 
-O formato de erros, a paginação e demais convenções REST estão em [`requisitos-be.md`](./requisitos-be.md#2-convenções-da-api-rest).
+O formato de erros, a paginação e demais convenções REST estão em [`RNF-BE.md`](./backend/RNF-BE.md#2-convenções-da-api-rest).
 
 ### 3.6 Testes e qualidade contínua
 
-Os requisitos de testes automatizados são exigíveis a partir da **fase de testes** do projeto (RNF-016; ver [Contribuições](../README.md#6-contribuições)). Até lá, os critérios de aceite de cada RF são verificados manualmente (Swagger UI e navegador) e o resultado é registrado no PR.
+Os requisitos de testes automatizados são exigíveis a partir da **fase de testes** do projeto (RNF-016; ver [Contribuições](../../README.md#6-contribuições)). Até lá, os critérios de aceite de cada RF são verificados manualmente (Swagger UI e navegador) e o resultado é registrado no PR.
 
 | ID | Requisito | Como verificar |
 | --- | --- | --- |
@@ -141,8 +157,8 @@ Os requisitos de testes automatizados são exigíveis a partir da **fase de test
 | ID | Requisito | Como verificar |
 | --- | --- | --- |
 | RNF-050 | Logs DEVERIAM ser estruturados (JSON) fora do ambiente de desenvolvimento, com nível adequado e **identificador de correlação** (`X-Request-Id`) propagado entre frontend e backend. | Inspeção de logs. |
-| RNF-051 | O backend DEVE expor *health checks* (Actuator `/actuator/health`) sem detalhes sensíveis. | Verificação manual. |
-| RNF-052 | A configuração DEVE seguir *12-factor*: mesmo artefato para todos os ambientes, diferenças apenas por variáveis de ambiente e perfis (`dev`, `test`, `prod`; arquivos `application.yaml` e `application-{perfil}.yaml`). | Revisão. |
+| RNF-051 | O backend DEVE expor *health checks* (`/actuator/health`, caminho mantido do projeto de origem) sem detalhes sensíveis. | Verificação manual. |
+| RNF-052 | A configuração DEVE seguir *12-factor*: mesmo artefato para todos os ambientes, diferenças apenas por variáveis de ambiente e ambientes (`dev`, `test`, `prod`, escolhidos pela variável `APP_ENV` e lidos com pydantic-settings). | Revisão. |
 | RNF-053 | Endpoints de leitura DEVERIAM responder em p95 ≤ 500 ms e o login em p95 ≤ 800 ms (excluindo o custo intencional do hash de senha) em ambiente local com dados de teste. | Medição manual. |
 | RNF-054 | Listagens DEVEM ser **paginadas** no servidor; nunca retornar coleções ilimitadas. | Verificação dos critérios de aceite. |
 
@@ -166,20 +182,27 @@ Os requisitos de testes automatizados são exigíveis a partir da **fase de test
 
 | ID | Requisito |
 | --- | --- |
-| RNF-080 | IDE padrão: VS Code, com extensões de linguagem (Java e ESLint) e de assistente de IA. |
-| RNF-081 | O ambiente local DEVE subir com `docker compose up -d` (MySQL do Núcleo; cada novo serviço acrescenta seu próprio banco) e variáveis definidas a partir do `.env.example`. O arquivo `.env` NUNCA é versionado. |
-| RNF-082 | Formatação automática obrigatória: Spotless (google-java-format) no backend e Prettier + ESLint no frontend (ferramentas introduzidas por `RF-BE-001` e `RF-FE-001`, conforme RNF-015). |
+| RNF-080 | IDE padrão: VS Code, com extensões de linguagem (Python, Ruff e ESLint) e de assistente de IA. |
+| RNF-081 | O ambiente local DEVE subir com `docker compose up -d` (PostgreSQL do Núcleo; cada novo serviço acrescenta seu próprio banco) e variáveis definidas a partir do `.env.example`. O arquivo `.env` NUNCA é versionado. |
+| RNF-082 | Formatação automática obrigatória: Ruff (`ruff format` e `ruff check`) no backend e Prettier + ESLint no frontend (ferramentas introduzidas por `RF-BE-001` e `RF-FE-001`, conforme RNF-015). |
 | RNF-083 | O arquivo `AGENTS.md` na raiz DEVE orientar os assistentes de IA sobre como trabalhar no projeto e apontar para o README e para estes requisitos, sem repeti-los. |
 
 ### 3.11 Implantação
 
-Frontend no Netlify e backend no Render (passo a passo no [`README.md`](../README.md#7-implantação)).
+Frontend no Netlify e backend no Render (passo a passo no [`README.md`](../../README.md#7-implantação)).
 
 | ID | Requisito |
 | --- | --- |
-| RNF-100 | Cada serviço de backend DEVE ter um `Dockerfile` *multi-stage* na própria pasta, que gera a imagem executável sem depender de arquivos fora dela (o Render executa Java via Docker). |
+| RNF-100 | Cada serviço de backend DEVE ter um `Dockerfile` *multi-stage* na própria pasta, que gera a imagem executável sem depender de arquivos fora dela (o Render executa o backend via Docker). |
 | RNF-101 | A aplicação DEVE escutar na porta informada pela variável `PORT` (padrão 8080 em desenvolvimento). |
 | RNF-102 | Toda configuração de produção DEVE vir de variáveis de ambiente configuradas nos painéis do Netlify e do Render (RNF-022, RNF-052). Valores de `dev` (como o *seed*) NUNCA são habilitados em produção. |
 | RNF-103 | O frontend DEVE ser um build estático (`npm run build`, saída `dist/`) servido com *fallback* para as rotas da SPA e DEVE chamar a API **sempre por caminho relativo** (`/api/...`, mesma origem do frontend): em desenvolvimento, pelo `server.proxy` do Vite; em produção, por regra de *rewrite* do Netlify para o Render. O cookie de refresh NUNCA DEVE exigir `SameSite=None`. |
 | RNF-104 | O backend DEVE responder a `/actuator/health` sem autenticação e sem detalhes (RNF-051), para o *health check* do Render. |
 | RNF-105 | O ambiente oficial só DEVE ser implantado a partir da `main` do repositório principal. Branches de forks são implantadas apenas nas contas de seus autores. |
+
+### 3.12 Dados mestres e contexto da empresa
+
+| ID | Requisito |
+| --- | --- |
+| RNF-096 | Toda entidade de negócio DEVE pertencer a uma empresa (`empresa_id`). O valor é resolvido **no servidor**, a partir da empresa ativa ([RF-BE-002](./backend/RF-BE-002.md)), e NUNCA é informado nem aceito do cliente. Sem empresa ativa, nenhuma entidade de negócio é criada. |
+| RNF-097 | Registros mestres (clientes, fornecedores, produtos, serviços) que possuem histórico NÃO DEVEM ser excluídos: são **inativados**. A exclusão só é permitida sem histórico e, quando negada, retorna erro de negócio claro e específico, nunca um erro técnico genérico. |

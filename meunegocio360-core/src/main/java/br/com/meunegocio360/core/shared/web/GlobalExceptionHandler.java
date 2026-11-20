@@ -6,12 +6,14 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
@@ -140,6 +143,36 @@ public class GlobalExceptionHandler {
         "Tipo de mídia não suportado",
         "Envie o corpo como application/json.",
         "UNSUPPORTED_MEDIA_TYPE",
+        request);
+  }
+
+  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+  public ResponseEntity<ProblemDetail> tratarParametroInvalido(
+      MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+    return validacao(List.of(new ErroDeCampo(ex.getName(), "formato inválido")), request);
+  }
+
+  /** Duas pessoas alteraram o mesmo registro ao mesmo tempo (RNF-BE-28). */
+  @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+  public ResponseEntity<ProblemDetail> tratarConflitoDeVersao(
+      ObjectOptimisticLockingFailureException ex, HttpServletRequest request) {
+    return tratarApi(new VersaoDesatualizadaException(), request);
+  }
+
+  /**
+   * Rede de segurança: cada caso de uso traduz as restrições que conhece no erro de negócio
+   * específico; o que escapar vira 409, nunca 500 (RNF-BE-15).
+   */
+  @ExceptionHandler(DataIntegrityViolationException.class)
+  public ResponseEntity<ProblemDetail> tratarViolacaoDeIntegridade(
+      DataIntegrityViolationException ex, HttpServletRequest request) {
+    log.warn("Violação de integridade não traduzida em {}", request.getRequestURI());
+    return resposta(
+        HttpStatus.CONFLICT,
+        "conflito-de-dados",
+        "Conflito de dados",
+        "A operação conflita com dados já existentes.",
+        "DATA_CONFLICT",
         request);
   }
 

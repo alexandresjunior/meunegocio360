@@ -154,7 +154,7 @@ npm install
 npm run dev
 ```
 
-No perfil `dev`, o backend cria dois usuários fictícios (`admin@meunegocio360.com.br` e `usuario@meunegocio360.com.br`), com as senhas de `SEED_ADMIN_SENHA` e `SEED_USUARIO_SENHA`, que devem ter de 8 a 72 caracteres. A aplicação não sobe se `JWT_SECRET` tiver menos de 32 bytes. Para verificar manualmente os endpoints, use os arquivos `.http` em [`meunegocio360-core/requisicoes/`](./meunegocio360-core/requisicoes/README.md) (extensão REST Client).
+No perfil `dev`, o backend cria um usuário fictício por perfil ([RF-BE-002](./docs/requisitos/backend/RF-BE-002.md)): `admin@meunegocio360.com.br` (`ADMIN`, senha `SEED_ADMIN_SENHA`), `usuario@meunegocio360.com.br` (`OPERADOR_COMERCIAL`, senha `SEED_USUARIO_SENHA`) e `financeiro@meunegocio360.com.br` (`OPERADOR_FINANCEIRO`, senha `SEED_FINANCEIRO_SENHA`). As senhas devem ter de 8 a 72 caracteres. O seed não cria empresa: o primeiro cadastro é feito por um `ADMIN`. A aplicação não sobe se `JWT_SECRET` tiver menos de 32 bytes. Para verificar manualmente os endpoints, use os arquivos `.http` em [`meunegocio360-core/requisicoes/`](./meunegocio360-core/requisicoes/README.md) (extensão REST Client).
 
 A descrição de cada variável está comentada em [`.env.example`](./.env.example) e em [`meunegocio360-js/.env.example`](./meunegocio360-js/.env.example). Com tudo no ar: backend em `http://localhost:8080` (Swagger UI em `/swagger-ui.html`) e frontend em `http://localhost:5173`. Endpoints e telas existem à medida que os requisitos são implementados.
 

@@ -8,11 +8,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -37,8 +39,12 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
  *
  * <p>O CSRF do Spring fica desabilitado porque as APIs se autenticam pelo cabeçalho Authorization;
  * os endpoints com cookie usam as proteções acima (RNF-BE-40).
+ *
+ * <p>A autorização por perfil fica nos endpoints, com {@code @PreAuthorize} (RNF-BE-47); a falta de
+ * permissão responde 403 {@code ACCESS_DENIED} pelo tratador único de erros.
  */
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
   private static final String[] ROTAS_SWAGGER = {
@@ -77,13 +83,27 @@ public class SecurityConfig {
           }
           auth.anyRequest().authenticated();
         })
-        .oauth2ResourceServer(
-            rs -> rs.jwt(Customizer.withDefaults()).authenticationEntryPoint(entryPoint))
+        .oauth2ResourceServer(rs ->
+            rs.jwt(jwt -> jwt.jwtAuthenticationConverter(conversorDePerfil()))
+                .authenticationEntryPoint(entryPoint))
         .exceptionHandling(e ->
             e.authenticationEntryPoint(entryPoint)
                 .accessDeniedHandler((request, response, ex) ->
                     resolver.resolveException(request, response, null, ex)));
     return http.build();
+  }
+
+  /**
+   * Converte a claim {@code perfil} do JWT na autoridade {@code ROLE_<perfil>}, usada por
+   * {@code @PreAuthorize("hasRole('ADMIN')")} nos endpoints (RNF-BE-47).
+   */
+  private static JwtAuthenticationConverter conversorDePerfil() {
+    JwtGrantedAuthoritiesConverter autoridades = new JwtGrantedAuthoritiesConverter();
+    autoridades.setAuthoritiesClaimName("perfil");
+    autoridades.setAuthorityPrefix("ROLE_");
+    JwtAuthenticationConverter conversor = new JwtAuthenticationConverter();
+    conversor.setJwtGrantedAuthoritiesConverter(autoridades);
+    return conversor;
   }
 
   @Bean

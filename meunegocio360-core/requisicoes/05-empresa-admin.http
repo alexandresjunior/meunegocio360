@@ -1,0 +1,111 @@
+# RF-BE-002 — Empresa, perfil ADMIN (pode consultar, cadastrar, editar, inativar e reativar).
+#
+# Execute NA ORDEM, a partir de um banco SEM empresa ativa (o seed de dev não cria empresa).
+# Se já houver empresa ativa, o item 2 responde 200 e o item 4 responde 409 COMPANY_ALREADY_ACTIVE:
+# inative-a (item 8) ou use `docker compose down -v` para recomeçar do zero.
+
+@baseUrl = http://localhost:8080/api/v1
+
+### 1. Login como ADMIN
+# @name login
+# @prompt senha Senha do admin (valor de SEED_ADMIN_SENHA no .env)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@meunegocio360.com.br",
+  "senha": "{{senha}}"
+}
+
+### 2. Primeiro acesso sem empresa → 404 COMPANY_NOT_REGISTERED
+GET {{baseUrl}}/empresa
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+### 3. CNPJ com dígito verificador errado → 400 VALIDATION_ERROR com erro no campo "cnpj"
+POST {{baseUrl}}/empresa
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "razaoSocial": "Comércio Exemplo Ltda",
+  "cnpj": "11222333000180"
+}
+
+### 4. Cadastro → 201, Location: /api/v1/empresa, ativa true, fusoHorario e moeda padrão, versao 0
+# @name cadastro
+POST {{baseUrl}}/empresa
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "razaoSocial": "Comércio Exemplo Ltda",
+  "cnpj": "11222333000181",
+  "email": "contato@exemplo.com.br",
+  "telefone": "11987654321"
+}
+
+### 5. Agora a consulta encontra a empresa → 200
+GET {{baseUrl}}/empresa
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+### 6. Edição com a versao lida (0) → 200, novo nomeFantasia e versao 1
+# @name edicao
+PUT {{baseUrl}}/empresa/{{cadastro.response.body.$.id}}
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "razaoSocial": "Comércio Exemplo Ltda",
+  "nomeFantasia": "Exemplo Informática",
+  "cnpj": "11222333000181",
+  "email": "contato@exemplo.com.br",
+  "telefone": "11987654321",
+  "versao": 0
+}
+
+### 7. Mesma edição com a versao antiga (0) → 409 VERSION_CONFLICT
+PUT {{baseUrl}}/empresa/{{cadastro.response.body.$.id}}
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "razaoSocial": "Comércio Exemplo Ltda",
+  "nomeFantasia": "Outro nome",
+  "cnpj": "11222333000181",
+  "versao": 0
+}
+
+### 8. Inativação → 200 com ativa false (e GET /empresa volta a responder 404)
+# @name inativacao
+PATCH {{baseUrl}}/empresa/{{cadastro.response.body.$.id}}/situacao
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "ativa": false,
+  "versao": {{edicao.response.body.$.versao}}
+}
+
+### 9. Sem empresa ativa → 404 COMPANY_NOT_REGISTERED
+GET {{baseUrl}}/empresa
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+### 10. Reativação (nenhuma outra ativa) → 200 com ativa true
+PATCH {{baseUrl}}/empresa/{{cadastro.response.body.$.id}}/situacao
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "ativa": true,
+  "versao": {{inativacao.response.body.$.versao}}
+}
+
+### 11. Segunda empresa com a primeira ativa → 409 COMPANY_ALREADY_ACTIVE (nada é criado)
+POST {{baseUrl}}/empresa
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "razaoSocial": "Outra Empresa Ltda",
+  "cnpj": "11444777000161"
+}

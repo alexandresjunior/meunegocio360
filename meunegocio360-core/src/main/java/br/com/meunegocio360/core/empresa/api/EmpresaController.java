@@ -3,6 +3,7 @@ package br.com.meunegocio360.core.empresa.api;
 import br.com.meunegocio360.core.empresa.application.EmpresaService;
 import br.com.meunegocio360.core.shared.error.ProblemResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -36,6 +38,41 @@ public class EmpresaController {
 
   public EmpresaController(EmpresaService empresaService) {
     this.empresaService = empresaService;
+  }
+
+  @GetMapping("/inativas")
+  @PreAuthorize("hasRole('ADMIN')")
+  @Operation(summary = "Listar empresas inativas para permitir sua reativação.")
+  @ApiResponses({
+    @ApiResponse(
+        responseCode = "200",
+        description = "Página de empresas inativas.",
+        content = @Content(schema = @Schema(implementation = PaginaEmpresaResponse.class))),
+    @ApiResponse(
+        responseCode = "400",
+        description = "Parâmetros de paginação ou ordenação inválidos.",
+        content =
+            @Content(
+                mediaType = "application/problem+json",
+                schema = @Schema(implementation = ProblemResponse.class))),
+    @ApiResponse(
+        responseCode = "403",
+        description = "Perfil sem permissão.",
+        content =
+            @Content(
+                mediaType = "application/problem+json",
+                schema = @Schema(implementation = ProblemResponse.class),
+                examples = @ExampleObject(value = "{\"code\":\"ACCESS_DENIED\",\"status\":403}")))
+  })
+  public PaginaEmpresaResponse listarInativas(
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size,
+      @Parameter(
+              description =
+                  "Campo permitido para ordenação: razaoSocial, cnpj, criadoEm ou atualizadoEm.")
+          @RequestParam(defaultValue = "razaoSocial")
+          String sort) {
+    return empresaService.listarInativas(page, size, sort);
   }
 
   @GetMapping

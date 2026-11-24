@@ -85,6 +85,8 @@ CNPJ e telefone são enviados **somente com dígitos** (RNF-FE-28). O campo `ver
 
 O nome fantasia (ou a razão social, se não houver) aparece na barra de navegação para todos os usuários, ao lado do nome do usuário e do botão **Sair**.
 
+Quando não houver empresa ativa, o ADMIN pode consultar as empresas inativas em `/empresa/cadastro` por `GET /api/v1/empresa/inativas` (paginado, contrato adicional de RF-BE-002) e reativar a escolhida. A barra usa o logotipo branco sobre fundo Preto da paleta, mantendo a barra Laranja e os links em Preto; no mobile, a marca fica entre o menu hambúrguer e o ícone visual de pesquisa, que não executa busca nesta fase.
+
 ## Critérios de aceite
 
 ```gherkin
@@ -141,6 +143,12 @@ Cenário: Inativação com confirmação
   E ao cancelar nada muda
   E ao confirmar a empresa fica inativa e as telas de negócio são bloqueadas pelas guardas
 
+Cenário: Reativação de empresa inativa após recarregar
+  Dado que não existe empresa ativa e há uma empresa inativa
+  Quando um ADMIN abre "/empresa/cadastro" após recarregar a página
+  Então a empresa inativa aparece na lista paginada
+  E ao clicar em Reativar, a empresa fica ativa e sou levado a "/empresa"
+
 Cenário: Acesso negado por perfil
   Dado um usuário sem permissão para uma rota
   Quando abre a URL diretamente
@@ -149,6 +157,12 @@ Cenário: Acesso negado por perfil
 Cenário: Menu por perfil
   Dado um OPERADOR_COMERCIAL
   Então o menu mostra Início e Empresa e não mostra itens exclusivos de outros perfis
+
+Cenário: Marca e navegação responsivas
+  Quando acesso a aplicação em tela grande
+  Então a logo branca aparece à esquerda dos itens do menu em uma área de fundo Preto
+  E em tela móvel fica centralizada entre o menu hambúrguer e o ícone visual de pesquisa
+  E a barra permanece Laranja e os links Pretos
 
 Cenário: Acessibilidade e teclado
   Então todos os campos têm rótulo visível, erros são anunciados por role="alert" e o foco vai ao primeiro campo inválido

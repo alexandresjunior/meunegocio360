@@ -2,6 +2,8 @@
 
 Frontend do MeuNegocio360 em React 19, Vite e Bootstrap 5.
 
+As funcionalidades de login e empresa estão especificadas em [RF-FE-001](../docs/requisitos/frontend/RF-FE-001.md) e [RF-FE-002](../docs/requisitos/frontend/RF-FE-002.md). Os padrões visuais e técnicos estão em [RNF-FE.md](../docs/requisitos/frontend/RNF-FE.md).
+
 ## Desenvolvimento local
 
 Na raiz do repositório, configure as variáveis conforme `.env.example` e inicie o backend Núcleo. Em seguida:
@@ -22,4 +24,4 @@ npm run format
 npm run build
 ```
 
-O fluxo de login e as convenções de interface estão especificados em [`docs/requisitos-fe.md`](../docs/requisitos-fe.md#rf-fe-001--fluxo-de-login-do-usuário). Os requisitos gerais estão em [`docs/requisitos-gerais.md`](../docs/requisitos-gerais.md).
+Os requisitos gerais do projeto estão em [GERAIS.md](../docs/requisitos/GERAIS.md).

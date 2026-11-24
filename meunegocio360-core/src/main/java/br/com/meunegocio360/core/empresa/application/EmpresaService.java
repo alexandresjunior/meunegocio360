@@ -4,11 +4,14 @@ import br.com.meunegocio360.core.empresa.api.AlterarSituacaoEmpresaRequest;
 import br.com.meunegocio360.core.empresa.api.AtualizarEmpresaRequest;
 import br.com.meunegocio360.core.empresa.api.CriarEmpresaRequest;
 import br.com.meunegocio360.core.empresa.api.EmpresaResponse;
+import br.com.meunegocio360.core.empresa.api.PaginaEmpresaResponse;
 import br.com.meunegocio360.core.empresa.domain.ConflitoEmpresa;
 import br.com.meunegocio360.core.empresa.domain.Empresa;
 import br.com.meunegocio360.core.empresa.domain.EmpresaRepositorio;
+import br.com.meunegocio360.core.empresa.domain.PaginaEmpresas;
 import br.com.meunegocio360.core.shared.error.ErroDeNegocio;
 import java.time.Clock;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
@@ -16,6 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class EmpresaService {
+
+  private static final Set<String> CAMPOS_ORDENACAO =
+      Set.of("razaoSocial", "cnpj", "criadoEm", "atualizadoEm");
 
   private final EmpresaRepositorio empresaRepositorio;
   private final Clock clock;
@@ -37,6 +43,32 @@ public class EmpresaService {
                     "COMPANY_NOT_REGISTERED",
                     "Empresa não cadastrada",
                     "Nenhuma empresa ativa está cadastrada."));
+  }
+
+  @Transactional(readOnly = true)
+  public PaginaEmpresaResponse listarInativas(int page, int size, String sort) {
+    if (page < 0 || size < 1 || size > 100) {
+      throw new ErroDeNegocio(
+          400,
+          "VALIDATION_ERROR",
+          "Dados inválidos",
+          "page deve ser maior ou igual a 0 e size deve estar entre 1 e 100.");
+    }
+    if (sort == null || !CAMPOS_ORDENACAO.contains(sort)) {
+      throw new ErroDeNegocio(
+          400,
+          "VALIDATION_ERROR",
+          "Dados inválidos",
+          "sort deve ser um dos campos permitidos: razaoSocial, cnpj, criadoEm, atualizadoEm.");
+    }
+
+    PaginaEmpresas resultado = empresaRepositorio.listarInativas(page, size, sort);
+    return new PaginaEmpresaResponse(
+        resultado.content().stream().map(EmpresaService::resposta).toList(),
+        resultado.page(),
+        resultado.size(),
+        resultado.totalElements(),
+        resultado.totalPages());
   }
 
   @Transactional

@@ -80,6 +80,22 @@ Retorna a **empresa ativa**. `404` com `code` `COMPANY_NOT_REGISTERED` quando n�
 }
 ```
 
+### `GET /empresa/inativas` (`ADMIN`)
+
+Lista empresas inativas para que o administrador possa reativá-las. Recebe `page` (padrão `0`), `size` (padrão `20`, máximo `100`) e `sort` (padrão `razaoSocial`; campos permitidos: `razaoSocial`, `cnpj`, `criadoEm`, `atualizadoEm`). Resposta paginada:
+
+```json
+{
+  "content": [],
+  "page": 0,
+  "size": 20,
+  "totalElements": 0,
+  "totalPages": 0
+}
+```
+
+Cada item segue o mesmo formato de `GET /empresa`, com `ativa: false`. Perfis diferentes de `ADMIN` recebem `403 ACCESS_DENIED`.
+
 ### `POST /empresa` (`ADMIN`)
 
 Corpo: `razaoSocial` (obrigatório, 3 a 150), `nomeFantasia` (opcional, até 150), `cnpj` (obrigatório, 14 dígitos), `email` (opcional, até 160), `telefone` (opcional, 10 ou 11 dígitos), `fusoHorario` e `moeda` (opcionais, com os padrões da RN-05). Resposta `201 Created` com `Location` e o objeto da empresa, já **ativa**.
@@ -134,6 +150,12 @@ Cenário: Primeiro acesso sem empresa cadastrada
   Dado que estou autenticado e não existe empresa ativa
   Quando envio GET /api/v1/empresa
   Então recebo 404 com code COMPANY_NOT_REGISTERED
+
+Cenário: Administrador consulta empresas inativas
+  Dado que estou autenticado como ADMIN e há empresas inativas
+  Quando envio GET /api/v1/empresa/inativas?page=0&size=20
+  Então recebo uma página com as empresas inativas e metadados de paginação
+  E como OPERADOR_COMERCIAL recebo 403 ACCESS_DENIED
 
 Cenário: Administrador cadastra a empresa
   Dado que estou autenticado como ADMIN e não existe empresa ativa

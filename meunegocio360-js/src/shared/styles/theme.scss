@@ -23,6 +23,10 @@ $font-size-base: 1rem;
 $input-btn-font-size: 1rem;
 $input-btn-padding-y: 0.625rem;
 $input-btn-padding-x: 0.875rem;
+$navbar-light-color: $body-color;
+$navbar-light-hover-color: $body-color;
+$navbar-light-active-color: $body-color;
+$navbar-light-toggler-border-color: $body-color;
 
 @import 'bootstrap/scss/bootstrap';
 
@@ -54,6 +58,100 @@ body {
 .form-control,
 .btn {
   min-height: 44px;
+}
+
+.app-navbar {
+  background-color: $primary;
+}
+
+.app-brand-frame {
+  display: inline-flex;
+  min-width: 10rem;
+  height: 3rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  background-color: $body-color;
+}
+
+.app-brand-logo {
+  display: block;
+  width: 9rem;
+  max-height: 2.5rem;
+  object-fit: contain;
+}
+
+.app-mobile-navbar {
+  min-height: 3.5rem;
+}
+
+.app-mobile-navbar-side {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 44px;
+  align-items: center;
+}
+
+.app-mobile-navbar .navbar-toggler {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.5rem;
+  border-color: $body-color;
+}
+
+.app-mobile-brand {
+  display: flex;
+  flex: 1 1 auto;
+  justify-content: center;
+  margin: 0;
+}
+
+.app-brand-frame-mobile {
+  min-width: 8rem;
+  height: 2.75rem;
+  padding: 0.2rem 0.4rem;
+}
+
+.app-brand-frame-mobile .app-brand-logo {
+  width: 7rem;
+  max-height: 2.25rem;
+}
+
+.app-search-mark {
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  color: $body-color;
+}
+
+.app-search-mark svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
+.app-navigation .nav-link {
+  min-height: 44px;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.app-account {
+  color: $body-color;
+}
+
+.pagination .page-link {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (prefers-reduced-motion: reduce) {

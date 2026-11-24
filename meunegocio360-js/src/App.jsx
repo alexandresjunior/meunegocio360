@@ -2,11 +2,24 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router'
 import { AuthProvider, RequireAuth, useAuth } from './features/auth'
+import {
+  EmpresaProvider,
+  RequireEmpresa,
+  RequireRole,
+} from './features/empresa'
+import { ACCESS_PROFILES } from './shared/lib/accessProfiles.js'
 import { LoadingPage } from './shared/ui/LoadingPage.jsx'
 
 const LoginPage = lazy(() => import('./features/auth/pages/LoginPage.jsx'))
 const HomePage = lazy(() => import('./features/home/pages/HomePage.jsx'))
 const NotFoundPage = lazy(() => import('./shared/ui/NotFoundPage.jsx'))
+const AppLayout = lazy(() => import('./app/AppLayout.jsx'))
+const EmpresaPage = lazy(
+  () => import('./features/empresa/pages/EmpresaPage.jsx'),
+)
+const EmpresaCadastroPage = lazy(
+  () => import('./features/empresa/pages/EmpresaCadastroPage.jsx'),
+)
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -56,14 +69,42 @@ function AuthenticatedRoutes() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route
-          path="/"
           element={
             <RequireAuth>
-              <HomePage />
+              <EmpresaProvider>
+                <AppLayout />
+              </EmpresaProvider>
             </RequireAuth>
           }
-        />
-        <Route path="*" element={<NotFoundPage />} />
+        >
+          <Route
+            path="/"
+            element={
+              <RequireEmpresa>
+                <HomePage />
+              </RequireEmpresa>
+            }
+          />
+          <Route
+            path="/empresa/cadastro"
+            element={
+              <RequireRole roles={[ACCESS_PROFILES.ADMIN]}>
+                <RequireEmpresa>
+                  <EmpresaCadastroPage />
+                </RequireEmpresa>
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/empresa"
+            element={
+              <RequireEmpresa>
+                <EmpresaPage />
+              </RequireEmpresa>
+            }
+          />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
       </Routes>
     </Suspense>
   )

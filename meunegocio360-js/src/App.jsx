@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router'
+import { BrowserRouter, Outlet, Route, Routes } from 'react-router'
 import { AuthProvider, RequireAuth, useAuth } from './features/auth'
 import {
+  AccessDeniedPage,
   EmpresaProvider,
   RequireEmpresa,
   RequireRole,
@@ -19,6 +20,15 @@ const EmpresaPage = lazy(
 )
 const EmpresaCadastroPage = lazy(
   () => import('./features/empresa/pages/EmpresaCadastroPage.jsx'),
+)
+const ClientesPage = lazy(
+  () => import('./features/clientes/pages/ClientesPage.jsx'),
+)
+const ClienteFormPage = lazy(
+  () => import('./features/clientes/pages/ClienteFormPage.jsx'),
+)
+const ClienteSelectDevPage = lazy(
+  () => import('./features/clientes/pages/ClienteSelectDevPage.jsx'),
 )
 
 const queryClient = new QueryClient({
@@ -103,6 +113,31 @@ function AuthenticatedRoutes() {
               </RequireEmpresa>
             }
           />
+          <Route path="/acesso-negado" element={<AccessDeniedPage />} />
+          <Route
+            element={
+              <RequireRole
+                roles={[
+                  ACCESS_PROFILES.ADMIN,
+                  ACCESS_PROFILES.COMMERCIAL_OPERATOR,
+                ]}
+              >
+                <RequireEmpresa>
+                  <Outlet />
+                </RequireEmpresa>
+              </RequireRole>
+            }
+          >
+            <Route path="/clientes" element={<ClientesPage />} />
+            <Route path="/clientes/novo" element={<ClienteFormPage />} />
+            <Route path="/clientes/:id" element={<ClienteFormPage />} />
+            {import.meta.env.DEV && (
+              <Route
+                path="/dev/cliente-select"
+                element={<ClienteSelectDevPage />}
+              />
+            )}
+          </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

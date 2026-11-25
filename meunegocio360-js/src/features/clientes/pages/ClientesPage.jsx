@@ -271,6 +271,7 @@ function ClientesPage() {
                             to={`/clientes/${cliente.id}${location.search}`}
                             size="sm"
                             variant="outline-dark"
+                            className="d-inline-flex align-items-center justify-content-center"
                           >
                             Editar
                           </Button>

@@ -3,12 +3,20 @@ import { Button, Container, Nav, Navbar } from 'react-bootstrap'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 import { useAuth } from '../features/auth'
 import { useEmpresa } from '../features/empresa'
-import { ALL_ACCESS_PROFILES } from '../shared/lib/accessProfiles.js'
+import {
+  ACCESS_PROFILES,
+  ALL_ACCESS_PROFILES,
+} from '../shared/lib/accessProfiles.js'
 import brandLogo from '../assets/logo_meunegocio360_v1_branca.png'
 
 const navigationItems = [
   { label: 'Início', to: '/', profiles: ALL_ACCESS_PROFILES },
   { label: 'Empresa', to: '/empresa', profiles: ALL_ACCESS_PROFILES },
+  {
+    label: 'Clientes',
+    to: '/clientes',
+    profiles: [ACCESS_PROFILES.ADMIN, ACCESS_PROFILES.COMMERCIAL_OPERATOR],
+  },
 ]
 
 function BrandMark({ compact = false }) {

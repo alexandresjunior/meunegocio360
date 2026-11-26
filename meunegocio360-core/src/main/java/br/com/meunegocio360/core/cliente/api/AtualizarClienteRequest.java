@@ -1,6 +1,8 @@
 package br.com.meunegocio360.core.cliente.api;
 
-import br.com.meunegocio360.core.cliente.domain.TipoPessoa;
+import br.com.meunegocio360.core.shared.domain.TipoPessoa;
+import br.com.meunegocio360.core.shared.validation.DocumentoValido;
+import br.com.meunegocio360.core.shared.validation.DocumentoValidoValidator;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -8,7 +10,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
-@DocumentoClienteValido
+@DocumentoValido
 public record AtualizarClienteRequest(
     @NotNull(message = "é obrigatório") TipoPessoa tipoPessoa,
     @NotBlank(message = "é obrigatório")
@@ -21,7 +23,7 @@ public record AtualizarClienteRequest(
     @Pattern(regexp = "\\d{10,11}", message = "deve conter 10 ou 11 dígitos") String telefone,
     @NotNull(message = "é obrigatório") @PositiveOrZero(message = "não pode ser negativo")
         Long versao)
-    implements DocumentoClienteValidoValidator.DadosDocumento {
+    implements DocumentoValidoValidator.DadosDocumento {
 
   public AtualizarClienteRequest {
     nome = trim(nome);

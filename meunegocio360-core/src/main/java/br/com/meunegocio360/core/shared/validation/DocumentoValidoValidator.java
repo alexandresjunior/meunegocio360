@@ -1,14 +1,11 @@
-package br.com.meunegocio360.core.cliente.api;
+package br.com.meunegocio360.core.shared.validation;
 
-import br.com.meunegocio360.core.cliente.domain.TipoPessoa;
-import br.com.meunegocio360.core.shared.validation.ValidadorCnpj;
-import br.com.meunegocio360.core.shared.validation.ValidadorCpf;
+import br.com.meunegocio360.core.shared.domain.TipoPessoa;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 import java.util.regex.Pattern;
 
-public class DocumentoClienteValidoValidator
-    implements ConstraintValidator<DocumentoClienteValido, Object> {
+public class DocumentoValidoValidator implements ConstraintValidator<DocumentoValido, Object> {
 
   private static final Pattern CPF_FORMATADO = Pattern.compile("\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}");
   private static final Pattern CNPJ_FORMATADO =

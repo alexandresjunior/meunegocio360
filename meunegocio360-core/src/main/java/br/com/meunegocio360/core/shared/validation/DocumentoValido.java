@@ -1,4 +1,4 @@
-package br.com.meunegocio360.core.cliente.api;
+package br.com.meunegocio360.core.shared.validation;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
@@ -9,10 +9,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 @Documented
-@Constraint(validatedBy = DocumentoClienteValidoValidator.class)
+@Constraint(validatedBy = DocumentoValidoValidator.class)
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface DocumentoClienteValido {
+public @interface DocumentoValido {
 
   String message() default
       "não corresponde ao tipo de pessoa ou possui dígitos verificadores inválidos";

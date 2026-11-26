@@ -230,6 +230,28 @@ Corpo de exemplo para cadastro:
 
 Para validar a exigência de empresa ativa em ambiente de desenvolvimento, inative temporariamente a empresa pelo endpoint de RF-BE-002 e tente cadastrar cliente: a resposta esperada é `422 COMPANY_NOT_ACTIVE`. Reative a empresa antes de continuar os fluxos acima. A exclusão com histórico será exercitada quando existirem vínculos de vendas ou OS; até lá, a interface de verificação de vínculos permite integração sem acoplar features.
 
+### Cadastro de fornecedores no Postman (RF-BE-004)
+
+Pré-requisitos: migrations V1–V6 aplicadas, empresa ativa cadastrada, aplicação em `dev` e Postman com `baseUrl=http://localhost:8080`. Autentique cada fluxo por `POST {{baseUrl}}/api/v1/auth/login` com a conta indicada e envie o `accessToken` como Bearer token. Use as senhas configuradas localmente; não as salve em coleções compartilhadas. A empresa ativa é resolvida no servidor e não deve ser enviada no corpo.
+
+Corpo de exemplo para cadastro de fornecedor pessoa jurídica:
+
+```json
+{
+  "tipoPessoa": "JURIDICA",
+  "nome": "Distribuidora Alfa Ltda",
+  "documento": "11.222.333/0001-81",
+  "email": "contato@alfa.exemplo",
+  "telefone": "1133334444"
+}
+```
+
+1. **ADMIN — cadastro e consulta:** autentique-se como `admin@meunegocio360.com.br` e envie `POST {{baseUrl}}/api/v1/fornecedores` com o corpo acima. Espere `201`, `Location`, `ativo: true` e documento normalizado como `11222333000181`; guarde `id` e `versao`. Consulte `GET /api/v1/fornecedores/{{fornecedorId}}` e liste `GET /api/v1/fornecedores?q=Distribuidora&page=0&size=20&sort=nome`; espere `200` e os campos de paginação.
+2. **OPERADOR_FINANCEIRO — acesso permitido e cadastro:** autentique-se como `financeiro@meunegocio360.com.br`. Consulte a listagem e envie `POST /api/v1/fornecedores` com um CPF válido ainda não usado, por exemplo `{"tipoPessoa":"FISICA","nome":"Fornecedor Financeiro Exemplo","documento":"11144477735","email":"","telefone":""}`. Espere `201` e o documento armazenado apenas com dígitos. Para testar atualização/inativação, use o `id` e a `versao` retornados em `PUT /api/v1/fornecedores/{{fornecedorId}}` ou `PATCH /api/v1/fornecedores/{{fornecedorId}}/situacao`.
+3. **OPERADOR_COMERCIAL — acesso negado:** autentique-se como `usuario@meunegocio360.com.br` e envie `GET {{baseUrl}}/api/v1/fornecedores`; espere `403`, `code: "ACCESS_DENIED"` e `Content-Type: application/problem+json`.
+
+Para validar documento inválido, envie um dígito verificador incorreto e espere `400 VALIDATION_ERROR` com erro no campo `documento`. O mesmo documento em outro cadastro de fornecedor da empresa deve retornar `409 SUPPLIER_DOCUMENT_DUPLICATE`; um documento utilizado por um cliente pode ser aceito como fornecedor, pois a unicidade é por entidade. Para validar empresa inativa, desative-a temporariamente pelo endpoint de RF-BE-002 e tente cadastrar fornecedor (`422 COMPANY_NOT_ACTIVE`); reative-a depois. O bloqueio `422 SUPPLIER_HAS_HISTORY` será verificável quando compras ou contas a pagar registrarem implementações de `VerificadorVinculoFornecedor`.
+
 ### Conceitos de DevOps (introdutórios)
 
 O foco do projeto é o desenvolvimento de software. Os conceitos de DevOps usados aqui são apenas introdutórios e já vêm prontos:
